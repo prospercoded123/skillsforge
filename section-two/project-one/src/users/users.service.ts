@@ -1,7 +1,10 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { hasPostgresCode, UNIQUE_VIOLATION } from '../common/database/postgres-errors.js';
+import {
+  hasPostgresCode,
+  UNIQUE_VIOLATION,
+} from '../common/database/postgres-errors.js';
 import { User } from './entities/user.entity.js';
 
 @Injectable()

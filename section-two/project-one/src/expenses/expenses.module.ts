@@ -7,7 +7,11 @@ import { ExpensesController } from './expenses.controller.js';
 import { ExpensesService } from './expenses.service.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Expense]), CategoriesModule, BudgetsModule],
+  imports: [
+    TypeOrmModule.forFeature([Expense]),
+    CategoriesModule,
+    BudgetsModule,
+  ],
   controllers: [ExpensesController],
   providers: [ExpensesService],
   exports: [ExpensesService],

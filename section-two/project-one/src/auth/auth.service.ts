@@ -29,7 +29,10 @@ export class AuthService {
 
   async register(dto: RegisterDto): Promise<AuthTokens> {
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    const user = await this.usersService.create(dto.email.toLowerCase(), passwordHash);
+    const user = await this.usersService.create(
+      dto.email.toLowerCase(),
+      passwordHash,
+    );
     return this.issueTokens(user);
   }
 
@@ -71,7 +74,9 @@ export class AuthService {
 
   private async issueTokens(user: User): Promise<AuthTokens> {
     const refreshToken = randomBytes(48).toString('base64url');
-    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(
+      Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000,
+    );
     await this.refreshTokens.save(
       this.refreshTokens.create({
         tokenHash: hashToken(refreshToken),
@@ -81,7 +86,10 @@ export class AuthService {
     );
 
     const payload: JwtPayload = { sub: user.id, email: user.email };
-    return { accessToken: await this.jwtService.signAsync(payload), refreshToken };
+    return {
+      accessToken: await this.jwtService.signAsync(payload),
+      refreshToken,
+    };
   }
 
   private async revokeAllFor(userId: string): Promise<void> {

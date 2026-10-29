@@ -27,7 +27,11 @@ describe('Spending analysis (e2e)', () => {
     user = await registerUser(app, 'ana@example.com');
     food = await createCategory(app, user, 'Food');
     transport = await createCategory(app, user, 'Transport');
-    await createExpense(app, user, { amount: 60, categoryId: food.id, date: '2026-07-10' });
+    await createExpense(app, user, {
+      amount: 60,
+      categoryId: food.id,
+      date: '2026-07-10',
+    });
     await createExpense(app, user, {
       title: 'Groceries',
       amount: 80,
@@ -78,7 +82,10 @@ describe('Spending analysis (e2e)', () => {
       increase: 60,
       percentUsed: 120,
     });
-    expect(foodAlert.largestExpenses[0]).toMatchObject({ title: 'Groceries', date: '2026-08-03' });
+    expect(foodAlert.largestExpenses[0]).toMatchObject({
+      title: 'Groceries',
+      date: '2026-08-03',
+    });
     expect(res.body.analysis.suggestions).toContain(
       'Food is 20.00 over its budget of 100.00 (120% used).',
     );
@@ -93,7 +100,11 @@ describe('Spending analysis (e2e)', () => {
     const overall = res.body.analysis.budgetAlerts.find(
       (alert: { scope: string }) => alert.scope === 'overall',
     );
-    expect(overall).toMatchObject({ spent: 150, limit: 500, status: 'on_track' });
+    expect(overall).toMatchObject({
+      spent: 150,
+      limit: 500,
+      status: 'on_track',
+    });
   });
 
   it('reports trends for a date range but no budget flags without a month', async () => {
@@ -107,7 +118,10 @@ describe('Spending analysis (e2e)', () => {
   });
 
   it('returns no trends when no range is given', async () => {
-    const res = await request(app.getHttpServer()).get('/expenses/summary').set(user.headers).expect(200);
+    const res = await request(app.getHttpServer())
+      .get('/expenses/summary')
+      .set(user.headers)
+      .expect(200);
 
     expect(res.body.analysis.categoryTrends).toEqual([]);
   });

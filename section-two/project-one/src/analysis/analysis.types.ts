@@ -28,7 +28,8 @@ export interface AnalysisInput {
   budgets: MonthBudgetPlan | null;
 }
 
-export type BudgetStatus = 'exceeded' | 'projected_to_exceed' | 'near_limit' | 'on_track';
+export type BudgetStatus =
+  'exceeded' | 'projected_to_exceed' | 'near_limit' | 'on_track';
 
 export interface ExpenseHighlight {
   expenseId: string;

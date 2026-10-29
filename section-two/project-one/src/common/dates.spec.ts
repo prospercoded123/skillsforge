@@ -3,8 +3,14 @@ import { addDays, daysBetween, monthRange, previousMonth } from './dates.js';
 
 describe('dates', () => {
   it('returns the first and last day of a month', () => {
-    expect(monthRange('2026-02')).toEqual({ from: '2026-02-01', to: '2026-02-28' });
-    expect(monthRange('2028-02')).toEqual({ from: '2028-02-01', to: '2028-02-29' });
+    expect(monthRange('2026-02')).toEqual({
+      from: '2026-02-01',
+      to: '2026-02-28',
+    });
+    expect(monthRange('2028-02')).toEqual({
+      from: '2028-02-01',
+      to: '2028-02-29',
+    });
   });
 
   it('steps back to the previous month across a year boundary', () => {

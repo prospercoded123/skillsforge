@@ -12,7 +12,10 @@ const STATUS_LABELS: Record<string, string> = {
   on_track: 'On track',
 };
 
-export function renderExpenseReportPdf(report: ExpenseReport, period: string): Promise<Buffer> {
+export function renderExpenseReportPdf(
+  report: ExpenseReport,
+  period: string,
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: MARGIN });
     const chunks: Buffer[] = [];
@@ -25,25 +28,38 @@ export function renderExpenseReportPdf(report: ExpenseReport, period: string): P
   });
 }
 
-function writeReport(doc: PDFKit.PDFDocument, report: ExpenseReport, period: string): void {
+function writeReport(
+  doc: PDFKit.PDFDocument,
+  report: ExpenseReport,
+  period: string,
+): void {
   doc.font('Helvetica-Bold').fontSize(18).text('Expense report');
   doc.font('Helvetica').fontSize(10).text(`Period: ${period}`);
   doc.text(`Generated: ${report.generatedAt}`);
 
   heading(doc, 'Summary');
-  doc.font('Helvetica').fontSize(11).text(`Total spent: ${money(report.summary.total)}`);
+  doc
+    .font('Helvetica')
+    .fontSize(11)
+    .text(`Total spent: ${money(report.summary.total)}`);
   doc.moveDown(0.5);
   table(
     doc,
     ['Category', 'Total'],
-    report.summary.byCategory.map((row) => [row.categoryName, money(row.total)]),
+    report.summary.byCategory.map((row) => [
+      row.categoryName,
+      money(row.total),
+    ]),
     [395, 100],
   );
 
   heading(doc, 'Budgets');
   const alerts = report.summary.analysis.budgetAlerts;
   if (alerts.length === 0) {
-    doc.font('Helvetica').fontSize(10).text('No budgets were set for this period.');
+    doc
+      .font('Helvetica')
+      .fontSize(10)
+      .text('No budgets were set for this period.');
   } else {
     table(
       doc,
@@ -64,7 +80,10 @@ function writeReport(doc: PDFKit.PDFDocument, report: ExpenseReport, period: str
     doc.font('Helvetica').fontSize(10).text('Nothing to flag for this period.');
   }
   for (const suggestion of suggestions) {
-    doc.font('Helvetica').fontSize(10).text(`• ${suggestion}`, { width: CONTENT_WIDTH });
+    doc
+      .font('Helvetica')
+      .fontSize(10)
+      .text(`• ${suggestion}`, { width: CONTENT_WIDTH });
   }
 
   heading(doc, 'Expenses');
@@ -100,7 +119,12 @@ function table(
   }
 }
 
-function writeRow(doc: PDFKit.PDFDocument, cells: string[], widths: number[], bold: boolean): void {
+function writeRow(
+  doc: PDFKit.PDFDocument,
+  cells: string[],
+  widths: number[],
+  bold: boolean,
+): void {
   const bottom = doc.page.height - doc.page.margins.bottom;
   if (doc.y + ROW_HEIGHT > bottom) {
     doc.addPage();

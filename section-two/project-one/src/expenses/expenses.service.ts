@@ -5,7 +5,12 @@ import { analyzeSpending } from '../analysis/analyze-spending.js';
 import { SpendingRecord } from '../analysis/analysis.types.js';
 import { BudgetsService } from '../budgets/budgets.service.js';
 import { CategoriesService } from '../categories/categories.service.js';
-import { DateRange, monthRange, previousMonth, todayString } from '../common/dates.js';
+import {
+  DateRange,
+  monthRange,
+  previousMonth,
+  todayString,
+} from '../common/dates.js';
 import { roundMoney } from '../common/money.js';
 import { PaginatedResult } from '../common/paginated-result.js';
 import { CreateExpenseDto } from './dto/create-expense.dto.js';
@@ -46,7 +51,10 @@ export class ExpensesService {
     );
   }
 
-  async findAll(userId: string, query: ExpenseListQueryDto): Promise<PaginatedResult<Expense>> {
+  async findAll(
+    userId: string,
+    query: ExpenseListQueryDto,
+  ): Promise<PaginatedResult<Expense>> {
     const [data, total] = await this.sorted(this.filtered(userId, query), query)
       .skip((query.page - 1) * query.limit)
       .take(query.limit)
@@ -56,7 +64,10 @@ export class ExpensesService {
 
   // All matching expenses with their category, without pagination.
   list(userId: string, query: ExpenseQueryDto): Promise<Expense[]> {
-    const qb = this.filtered(userId, query).innerJoinAndSelect('expense.category', 'category');
+    const qb = this.filtered(userId, query).innerJoinAndSelect(
+      'expense.category',
+      'category',
+    );
     return this.sorted(qb, query).getMany();
   }
 
@@ -68,7 +79,11 @@ export class ExpensesService {
     return expense;
   }
 
-  async update(userId: string, id: string, dto: UpdateExpenseDto): Promise<Expense> {
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateExpenseDto,
+  ): Promise<Expense> {
     const expense = await this.findOne(userId, id);
     if (dto.categoryId !== undefined) {
       await this.categoriesService.findOne(userId, dto.categoryId);
@@ -77,7 +92,8 @@ export class ExpensesService {
     if (dto.title !== undefined) expense.title = dto.title;
     if (dto.amount !== undefined) expense.amount = dto.amount;
     if (dto.date !== undefined) expense.date = dto.date;
-    if (dto.paymentMethod !== undefined) expense.paymentMethod = dto.paymentMethod;
+    if (dto.paymentMethod !== undefined)
+      expense.paymentMethod = dto.paymentMethod;
     return this.expenses.save(expense);
   }
 
@@ -86,7 +102,10 @@ export class ExpensesService {
     await this.expenses.remove(expense);
   }
 
-  async summary(userId: string, query: ExpenseQueryDto): Promise<ExpenseSummary> {
+  async summary(
+    userId: string,
+    query: ExpenseQueryDto,
+  ): Promise<ExpenseSummary> {
     const rows = await this.filtered(userId, query)
       .innerJoin('expense.category', 'category')
       .select('expense.categoryId', 'categoryId')
@@ -94,7 +113,11 @@ export class ExpensesService {
       .addSelect('SUM(expense.amount)', 'total')
       .groupBy('expense.categoryId')
       .addGroupBy('category.name')
-      .getRawMany<{ categoryId: string; categoryName: string; total: string }>();
+      .getRawMany<{
+        categoryId: string;
+        categoryName: string;
+        total: string;
+      }>();
 
     const byCategory = rows.map((row) => ({
       categoryId: row.categoryId,
@@ -114,9 +137,14 @@ export class ExpensesService {
     const period = this.rangeOf(query);
     const current = period ? await this.list(userId, rangeQuery(period)) : [];
     const previous = query.month
-      ? await this.list(userId, rangeQuery(monthRange(previousMonth(query.month))))
+      ? await this.list(
+          userId,
+          rangeQuery(monthRange(previousMonth(query.month))),
+        )
       : [];
-    const budgets = query.month ? await this.budgetsService.findForMonth(userId, query.month) : null;
+    const budgets = query.month
+      ? await this.budgetsService.findForMonth(userId, query.month)
+      : null;
 
     return analyzeSpending({
       current: current.map(toSpendingRecord),
@@ -134,13 +162,18 @@ export class ExpensesService {
     return query.from && query.to ? { from: query.from, to: query.to } : null;
   }
 
-  private filtered(userId: string, query: ExpenseQueryDto): SelectQueryBuilder<Expense> {
+  private filtered(
+    userId: string,
+    query: ExpenseQueryDto,
+  ): SelectQueryBuilder<Expense> {
     const qb = this.expenses
       .createQueryBuilder('expense')
       .where('expense.userId = :userId', { userId });
 
     if (query.categoryId) {
-      qb.andWhere('expense.categoryId = :categoryId', { categoryId: query.categoryId });
+      qb.andWhere('expense.categoryId = :categoryId', {
+        categoryId: query.categoryId,
+      });
     }
     if (query.paymentMethod) {
       qb.andWhere('expense.paymentMethod = :paymentMethod', {
@@ -159,9 +192,14 @@ export class ExpensesService {
   }
 
   // The id tie-breaker keeps pages stable when two expenses share a date or amount.
-  private sorted(qb: SelectQueryBuilder<Expense>, query: ExpenseQueryDto): SelectQueryBuilder<Expense> {
+  private sorted(
+    qb: SelectQueryBuilder<Expense>,
+    query: ExpenseQueryDto,
+  ): SelectQueryBuilder<Expense> {
     const direction = query.order === SortOrder.ASC ? 'ASC' : 'DESC';
-    return qb.orderBy(SORT_COLUMNS[query.sortBy], direction).addOrderBy('expense.id', 'ASC');
+    return qb
+      .orderBy(SORT_COLUMNS[query.sortBy], direction)
+      .addOrderBy('expense.id', 'ASC');
   }
 }
 

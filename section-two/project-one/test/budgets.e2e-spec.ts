@@ -28,14 +28,35 @@ describe('Budgets (e2e)', () => {
   });
 
   it('sets, updates and removes the overall monthly budget', async () => {
-    await request(app.getHttpServer()).put('/budgets/2026-10').set(user.headers).send({ limit: 500 }).expect(200);
-    await request(app.getHttpServer()).put('/budgets/2026-10').set(user.headers).send({ limit: 650 }).expect(200);
+    await request(app.getHttpServer())
+      .put('/budgets/2026-10')
+      .set(user.headers)
+      .send({ limit: 500 })
+      .expect(200);
+    await request(app.getHttpServer())
+      .put('/budgets/2026-10')
+      .set(user.headers)
+      .send({ limit: 650 })
+      .expect(200);
 
-    const res = await request(app.getHttpServer()).get('/budgets/2026-10').set(user.headers).expect(200);
-    expect(res.body).toEqual({ month: '2026-10', overall: 650, categories: [] });
+    const res = await request(app.getHttpServer())
+      .get('/budgets/2026-10')
+      .set(user.headers)
+      .expect(200);
+    expect(res.body).toEqual({
+      month: '2026-10',
+      overall: 650,
+      categories: [],
+    });
 
-    await request(app.getHttpServer()).delete('/budgets/2026-10').set(user.headers).expect(204);
-    await request(app.getHttpServer()).delete('/budgets/2026-10').set(user.headers).expect(404);
+    await request(app.getHttpServer())
+      .delete('/budgets/2026-10')
+      .set(user.headers)
+      .expect(204);
+    await request(app.getHttpServer())
+      .delete('/budgets/2026-10')
+      .set(user.headers)
+      .expect(404);
   });
 
   it('sets a budget for a single category', async () => {
@@ -45,7 +66,10 @@ describe('Budgets (e2e)', () => {
       .send({ limit: 200 })
       .expect(200);
 
-    const res = await request(app.getHttpServer()).get('/budgets/2026-10').set(user.headers).expect(200);
+    const res = await request(app.getHttpServer())
+      .get('/budgets/2026-10')
+      .set(user.headers)
+      .expect(200);
     expect(res.body.categories).toEqual([
       { categoryId: food.id, categoryName: 'Food', limit: 200 },
     ]);
@@ -62,6 +86,9 @@ describe('Budgets (e2e)', () => {
   });
 
   it('rejects a month that is not YYYY-MM', async () => {
-    await request(app.getHttpServer()).get('/budgets/2026-13').set(user.headers).expect(400);
+    await request(app.getHttpServer())
+      .get('/budgets/2026-13')
+      .set(user.headers)
+      .expect(400);
   });
 });

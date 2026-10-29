@@ -39,7 +39,8 @@ export function buildBudgetAlerts(input: AnalysisInput): BudgetAlert[] {
     );
   }
   for (const category of budgets.categories) {
-    const inCategory = (record: SpendingRecord) => record.categoryId === category.categoryId;
+    const inCategory = (record: SpendingRecord) =>
+      record.categoryId === category.categoryId;
     alerts.push(
       buildAlert(period, input.today, {
         scope: 'category',
@@ -54,7 +55,11 @@ export function buildBudgetAlerts(input: AnalysisInput): BudgetAlert[] {
   return alerts;
 }
 
-function buildAlert(period: DateRange, today: string, scope: AlertScope): BudgetAlert {
+function buildAlert(
+  period: DateRange,
+  today: string,
+  scope: AlertScope,
+): BudgetAlert {
   const spent = sumAmounts(scope.current);
   const previousSpent = sumAmounts(scope.previous);
   const projectedTotal = projectMonthEnd(spent, period, today);
@@ -76,7 +81,11 @@ function buildAlert(period: DateRange, today: string, scope: AlertScope): Budget
 }
 
 // Spending pace: what the period will total if it keeps going at the rate so far.
-function projectMonthEnd(spent: number, period: DateRange, today: string): number {
+function projectMonthEnd(
+  spent: number,
+  period: DateRange,
+  today: string,
+): number {
   const days = daysBetween(period.from, period.to);
   const elapsed = elapsedDays(period, today);
   if (elapsed === 0 || elapsed >= days) {
@@ -85,8 +94,14 @@ function projectMonthEnd(spent: number, period: DateRange, today: string): numbe
   return roundMoney((spent / elapsed) * days);
 }
 
-function safeDailySpend(spent: number, limit: number, period: DateRange, today: string): number {
-  const remainingDays = daysBetween(period.from, period.to) - elapsedDays(period, today);
+function safeDailySpend(
+  spent: number,
+  limit: number,
+  period: DateRange,
+  today: string,
+): number {
+  const remainingDays =
+    daysBetween(period.from, period.to) - elapsedDays(period, today);
   const remaining = limit - spent;
   if (remainingDays <= 0 || remaining <= 0) {
     return 0;
@@ -100,7 +115,11 @@ function elapsedDays(period: DateRange, today: string): number {
   return Math.min(Math.max(elapsed, 0), days);
 }
 
-function statusOf(spent: number, projectedTotal: number, limit: number): BudgetStatus {
+function statusOf(
+  spent: number,
+  projectedTotal: number,
+  limit: number,
+): BudgetStatus {
   if (spent > limit) return 'exceeded';
   if (projectedTotal > limit) return 'projected_to_exceed';
   if (spent >= limit * NEAR_LIMIT_RATIO) return 'near_limit';

@@ -20,7 +20,14 @@ export interface ExpenseReport {
   expenses: ExpenseReportRow[];
 }
 
-const CSV_HEADERS = ['id', 'title', 'amount', 'category', 'date', 'payment_method'];
+const CSV_HEADERS = [
+  'id',
+  'title',
+  'amount',
+  'category',
+  'date',
+  'payment_method',
+];
 
 @Injectable()
 export class ReportsService {
@@ -42,7 +49,14 @@ export class ReportsService {
     const expenses = await this.expensesService.list(userId, query);
     const lines = expenses.map((expense) => {
       const row = toRow(expense);
-      return [row.id, row.title, row.amount, row.category, row.date, row.paymentMethod]
+      return [
+        row.id,
+        row.title,
+        row.amount,
+        row.category,
+        row.date,
+        row.paymentMethod,
+      ]
         .map(csvCell)
         .join(',');
     });
@@ -68,7 +82,8 @@ function toRow(expense: Expense): ExpenseReportRow {
 
 function periodLabel(query: ExpenseQueryDto): string {
   if (query.month) return query.month;
-  if (query.from || query.to) return `${query.from ?? 'start'} to ${query.to ?? 'today'}`;
+  if (query.from || query.to)
+    return `${query.from ?? 'start'} to ${query.to ?? 'today'}`;
   return 'All dates';
 }
 

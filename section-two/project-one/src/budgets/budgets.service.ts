@@ -27,7 +27,11 @@ export class BudgetsService {
     private readonly categoriesService: CategoriesService,
   ) {}
 
-  async setOverall(userId: string, month: string, limit: number): Promise<MonthlyBudget> {
+  async setOverall(
+    userId: string,
+    month: string,
+    limit: number,
+  ): Promise<MonthlyBudget> {
     const budget =
       (await this.monthlyBudgets.findOneBy({ userId, month })) ??
       this.monthlyBudgets.create({ userId, month });
@@ -58,8 +62,16 @@ export class BudgetsService {
     return this.categoryBudgets.save(budget);
   }
 
-  async removeForCategory(userId: string, categoryId: string, month: string): Promise<void> {
-    const result = await this.categoryBudgets.delete({ userId, categoryId, month });
+  async removeForCategory(
+    userId: string,
+    categoryId: string,
+    month: string,
+  ): Promise<void> {
+    const result = await this.categoryBudgets.delete({
+      userId,
+      categoryId,
+      month,
+    });
     if (!result.affected) {
       throw new NotFoundException('No budget set for this category and month');
     }

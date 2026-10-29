@@ -28,7 +28,10 @@ export class ReportsController {
     }
     if (query.format === ExportFormat.CSV) {
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', 'attachment; filename="expenses.csv"');
+      res.setHeader(
+        'Content-Disposition',
+        'attachment; filename="expenses.csv"',
+      );
       return this.reportsService.toCsv(user.id, query);
     }
     return this.reportsService.toJson(user.id, query);

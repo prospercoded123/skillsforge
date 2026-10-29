@@ -5,7 +5,9 @@ import { configureApp } from '../../src/app-setup.js';
 import { AppModule } from '../../src/app.module.js';
 
 export async function createTestApp(): Promise<INestApplication> {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  const moduleRef = await Test.createTestingModule({
+    imports: [AppModule],
+  }).compile();
   const app = moduleRef.createNestApplication();
   configureApp(app);
   await app.init();
@@ -17,15 +19,25 @@ export interface TestUser {
   headers: { Authorization: string };
 }
 
-export async function registerUser(app: INestApplication, email: string): Promise<TestUser> {
+export async function registerUser(
+  app: INestApplication,
+  email: string,
+): Promise<TestUser> {
   const res = await request(app.getHttpServer())
     .post('/auth/register')
     .send({ email, password: 'password123' })
     .expect(201);
-  return { email, headers: { Authorization: `Bearer ${res.body.accessToken}` } };
+  return {
+    email,
+    headers: { Authorization: `Bearer ${res.body.accessToken}` },
+  };
 }
 
-export async function createCategory(app: INestApplication, user: TestUser, name: string) {
+export async function createCategory(
+  app: INestApplication,
+  user: TestUser,
+  name: string,
+) {
   const res = await request(app.getHttpServer())
     .post('/categories')
     .set(user.headers)

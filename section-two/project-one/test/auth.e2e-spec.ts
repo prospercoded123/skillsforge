@@ -11,7 +11,9 @@ describe('Auth (e2e)', () => {
   const credentials = { email: 'ana@example.com', password: 'password123' };
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();
@@ -27,7 +29,10 @@ describe('Auth (e2e)', () => {
   });
 
   it('registers and returns an access and refresh token', async () => {
-    const res = await request(server).post('/auth/register').send(credentials).expect(201);
+    const res = await request(server)
+      .post('/auth/register')
+      .send(credentials)
+      .expect(201);
 
     expect(res.body.accessToken).toEqual(expect.any(String));
     expect(res.body.refreshToken).toEqual(expect.any(String));
@@ -49,7 +54,10 @@ describe('Auth (e2e)', () => {
   });
 
   it('rotates the refresh token and rejects the old one', async () => {
-    const first = await request(server).post('/auth/register').send(credentials).expect(201);
+    const first = await request(server)
+      .post('/auth/register')
+      .send(credentials)
+      .expect(201);
 
     const refreshed = await request(server)
       .post('/auth/refresh')
@@ -64,7 +72,10 @@ describe('Auth (e2e)', () => {
   });
 
   it('ends every session when a used refresh token is replayed', async () => {
-    const first = await request(server).post('/auth/register').send(credentials).expect(201);
+    const first = await request(server)
+      .post('/auth/register')
+      .send(credentials)
+      .expect(201);
     const second = await request(server).post('/auth/refresh').send({
       refreshToken: first.body.refreshToken,
     });
@@ -81,7 +92,10 @@ describe('Auth (e2e)', () => {
   });
 
   it('revokes the refresh token on logout', async () => {
-    const tokens = await request(server).post('/auth/register').send(credentials).expect(201);
+    const tokens = await request(server)
+      .post('/auth/register')
+      .send(credentials)
+      .expect(201);
 
     await request(server)
       .post('/auth/logout')
@@ -94,6 +108,9 @@ describe('Auth (e2e)', () => {
   });
 
   it('rejects an invalid access token', async () => {
-    await request(server).get('/categories').set('Authorization', 'Bearer not-a-token').expect(401);
+    await request(server)
+      .get('/categories')
+      .set('Authorization', 'Bearer not-a-token')
+      .expect(401);
   });
 });

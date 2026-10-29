@@ -17,7 +17,9 @@ function toDayNumber(date: string): number {
 }
 
 export function addDays(date: string, days: number): string {
-  return new Date((toDayNumber(date) + days) * MS_PER_DAY).toISOString().slice(0, 10);
+  return new Date((toDayNumber(date) + days) * MS_PER_DAY)
+    .toISOString()
+    .slice(0, 10);
 }
 
 // Number of days from `from` to `to`, counting both ends.
@@ -29,7 +31,10 @@ export function monthRange(month: string): DateRange {
   const [year, monthNumber] = month.split('-').map(Number);
   // Day 0 of the following month is the last day of this one.
   const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  return { from: `${month}-01`, to: `${month}-${String(lastDay).padStart(2, '0')}` };
+  return {
+    from: `${month}-01`,
+    to: `${month}-${String(lastDay).padStart(2, '0')}`,
+  };
 }
 
 export function previousMonth(month: string): string {

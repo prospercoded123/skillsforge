@@ -70,7 +70,9 @@ function dominantExpense(group: SpendingRecord[]): SpendingRecord | undefined {
     return undefined;
   }
   const largest = group.reduce((a, b) => (b.amount > a.amount ? b : a));
-  return largest.amount >= sumAmounts(group) * DOMINANT_EXPENSE_RATIO ? largest : undefined;
+  return largest.amount >= sumAmounts(group) * DOMINANT_EXPENSE_RATIO
+    ? largest
+    : undefined;
 }
 
 function money(amount: number): string {

@@ -37,7 +37,11 @@ export class CategoriesService {
     return category;
   }
 
-  async update(userId: string, id: string, dto: UpdateCategoryDto): Promise<Category> {
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateCategoryDto,
+  ): Promise<Category> {
     const category = await this.findOne(userId, id);
     if (dto.name !== undefined) {
       category.name = dto.name;

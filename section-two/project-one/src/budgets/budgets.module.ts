@@ -7,7 +7,10 @@ import { CategoryBudget } from './entities/category-budget.entity.js';
 import { MonthlyBudget } from './entities/monthly-budget.entity.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([MonthlyBudget, CategoryBudget]), CategoriesModule],
+  imports: [
+    TypeOrmModule.forFeature([MonthlyBudget, CategoryBudget]),
+    CategoriesModule,
+  ],
   controllers: [BudgetsController],
   providers: [BudgetsService],
   exports: [BudgetsService],

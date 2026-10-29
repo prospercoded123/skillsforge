@@ -23,7 +23,10 @@ export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
 
   @Get(':month')
-  findForMonth(@CurrentUser() user: AuthUser, @Param('month', ParseMonthPipe) month: string) {
+  findForMonth(
+    @CurrentUser() user: AuthUser,
+    @Param('month', ParseMonthPipe) month: string,
+  ) {
     return this.budgetsService.findForMonth(user.id, month);
   }
 
@@ -38,7 +41,10 @@ export class BudgetsController {
 
   @Delete(':month')
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeOverall(@CurrentUser() user: AuthUser, @Param('month', ParseMonthPipe) month: string) {
+  removeOverall(
+    @CurrentUser() user: AuthUser,
+    @Param('month', ParseMonthPipe) month: string,
+  ) {
     return this.budgetsService.removeOverall(user.id, month);
   }
 
@@ -49,7 +55,12 @@ export class BudgetsController {
     @Param('categoryId', ParseUUIDPipe) categoryId: string,
     @Body() dto: SetBudgetDto,
   ) {
-    return this.budgetsService.setForCategory(user.id, categoryId, month, dto.limit);
+    return this.budgetsService.setForCategory(
+      user.id,
+      categoryId,
+      month,
+      dto.limit,
+    );
   }
 
   @Delete(':month/categories/:categoryId')

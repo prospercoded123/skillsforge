@@ -25,7 +25,10 @@ describe('analyzeSpending', () => {
       previous: [record('sept', 60, '2026-09-10')],
       period,
       today: '2026-10-20',
-      budgets: { overall: null, categories: [{ categoryId: 'food', categoryName: 'Food', limit: 100 }] },
+      budgets: {
+        overall: null,
+        categories: [{ categoryId: 'food', categoryName: 'Food', limit: 100 }],
+      },
     });
 
     const [alert] = analysis.budgetAlerts;
@@ -36,8 +39,13 @@ describe('analyzeSpending', () => {
       increase: 60,
       percentUsed: 120,
     });
-    expect(alert.largestExpenses[0]).toMatchObject({ title: 'Groceries', date: '2026-10-03' });
-    expect(analysis.suggestions).toContain('Food is 20.00 over its budget of 100.00 (120% used).');
+    expect(alert.largestExpenses[0]).toMatchObject({
+      title: 'Groceries',
+      date: '2026-10-03',
+    });
+    expect(analysis.suggestions).toContain(
+      'Food is 20.00 over its budget of 100.00 (120% used).',
+    );
   });
 
   it('warns when spending is close to the limit and shows the safe daily amount', () => {
@@ -46,7 +54,10 @@ describe('analyzeSpending', () => {
       previous: [],
       period,
       today: '2026-10-28',
-      budgets: { overall: null, categories: [{ categoryId: 'food', categoryName: 'Food', limit: 100 }] },
+      budgets: {
+        overall: null,
+        categories: [{ categoryId: 'food', categoryName: 'Food', limit: 100 }],
+      },
     }).budgetAlerts;
 
     expect(alert.status).toBe('near_limit');
@@ -59,7 +70,10 @@ describe('analyzeSpending', () => {
       previous: [],
       period,
       today: '2026-10-20',
-      budgets: { overall: null, categories: [{ categoryId: 'food', categoryName: 'Food', limit: 100 }] },
+      budgets: {
+        overall: null,
+        categories: [{ categoryId: 'food', categoryName: 'Food', limit: 100 }],
+      },
     }).budgetAlerts;
 
     expect(alert.status).toBe('projected_to_exceed');
@@ -72,7 +86,10 @@ describe('analyzeSpending', () => {
       previous: [],
       period,
       today: '2026-10-20',
-      budgets: { overall: null, categories: [{ categoryId: 'food', categoryName: 'Food', limit: 100 }] },
+      budgets: {
+        overall: null,
+        categories: [{ categoryId: 'food', categoryName: 'Food', limit: 100 }],
+      },
     }).budgetAlerts;
 
     expect(alert.status).toBe('on_track');
@@ -92,14 +109,21 @@ describe('analyzeSpending', () => {
 
   it('reports a rising trend with its weekly average', () => {
     const [food] = analyzeSpending({
-      current: [record('early', 10, '2026-10-02'), record('late', 40, '2026-10-20')],
+      current: [
+        record('early', 10, '2026-10-02'),
+        record('late', 40, '2026-10-20'),
+      ],
       previous: [],
       period,
       today: '2026-10-31',
       budgets: null,
     }).categoryTrends;
 
-    expect(food).toMatchObject({ direction: 'rising', total: 50, weeklyAverage: 11.29 });
+    expect(food).toMatchObject({
+      direction: 'rising',
+      total: 50,
+      weeklyAverage: 11.29,
+    });
   });
 
   it('treats small changes between halves as stable and large drops as falling', () => {
@@ -116,13 +140,20 @@ describe('analyzeSpending', () => {
       budgets: null,
     }).categoryTrends;
 
-    expect(trends.find((t) => t.categoryName === 'Transport')?.direction).toBe('stable');
-    expect(trends.find((t) => t.categoryName === 'Entertainment')?.direction).toBe('falling');
+    expect(trends.find((t) => t.categoryName === 'Transport')?.direction).toBe(
+      'stable',
+    );
+    expect(
+      trends.find((t) => t.categoryName === 'Entertainment')?.direction,
+    ).toBe('falling');
   });
 
   it('suggests reviewing a category when one expense dominates it', () => {
     const analysis = analyzeSpending({
-      current: [record('big', 80, '2026-10-03', 'food', 'Food', 'Groceries'), record('small', 20, '2026-10-04')],
+      current: [
+        record('big', 80, '2026-10-03', 'food', 'Food', 'Groceries'),
+        record('small', 20, '2026-10-04'),
+      ],
       previous: [],
       period,
       today: '2026-10-31',

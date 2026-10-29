@@ -21,7 +21,12 @@ export class Expense {
   @Column({ length: 100 })
   title: string;
 
-  @Column({ type: 'numeric', precision: 12, scale: 2, transformer: decimalTransformer })
+  @Column({
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
   amount: number;
 
   // A calendar date (YYYY-MM-DD), so timezones cannot shift it.

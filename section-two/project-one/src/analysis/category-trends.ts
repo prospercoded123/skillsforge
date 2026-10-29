@@ -2,7 +2,11 @@ import { addDays, daysBetween, DateRange } from '../common/dates.js';
 import { roundMoney } from '../common/money.js';
 import { groupByCategory, sumAmounts } from './analysis-math.js';
 import { DAYS_PER_WEEK, TREND_CHANGE_RATIO } from './analysis.constants.js';
-import { CategoryTrend, SpendingRecord, TrendDirection } from './analysis.types.js';
+import {
+  CategoryTrend,
+  SpendingRecord,
+  TrendDirection,
+} from './analysis.types.js';
 
 // Compares the first and second half of the period, using spend per day so that
 // halves of different lengths stay comparable.
@@ -22,7 +26,9 @@ export function buildCategoryTrends(
   return [...groupByCategory(records)]
     .map(([categoryId, categoryRecords]) => {
       const firstHalf = categoryRecords.filter((r) => r.date < secondHalfStart);
-      const secondHalf = categoryRecords.filter((r) => r.date >= secondHalfStart);
+      const secondHalf = categoryRecords.filter(
+        (r) => r.date >= secondHalfStart,
+      );
       const total = sumAmounts(categoryRecords);
 
       return {

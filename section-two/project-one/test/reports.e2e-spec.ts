@@ -11,7 +11,10 @@ import {
 } from './helpers/test-app.js';
 
 // Collects the raw bytes of a binary response so the PDF can be inspected.
-const binaryParser = (res: NodeJS.ReadableStream, callback: (error: Error | null, body: Buffer) => void) => {
+const binaryParser = (
+  res: NodeJS.ReadableStream,
+  callback: (error: Error | null, body: Buffer) => void,
+) => {
   const chunks: Buffer[] = [];
   res.on('data', (chunk: Buffer) => chunks.push(chunk));
   res.on('end', () => callback(null, Buffer.concat(chunks)));
