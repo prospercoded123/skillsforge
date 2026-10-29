@@ -1,9 +1,12 @@
 import {
   ConflictException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { ExpensesService } from '../expenses/expenses.service.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { Category } from './entities/category.entity.js';
@@ -11,6 +14,11 @@ import { Category } from './entities/category.entity.js';
 @Injectable()
 export class CategoriesService {
   private readonly categories = new Map<string, Category>();
+
+  constructor(
+    @Inject(forwardRef(() => ExpensesService))
+    private readonly expensesService: ExpensesService,
+  ) {}
 
   create(userId: string, dto: CreateCategoryDto): Category {
     this.assertNameAvailable(userId, dto.name);
@@ -48,6 +56,9 @@ export class CategoriesService {
 
   remove(userId: string, id: string): void {
     this.findOne(userId, id);
+    if (this.expensesService.countInCategory(userId, id) > 0) {
+      throw new ConflictException('Category still has expenses');
+    }
     this.categories.delete(id);
   }
 

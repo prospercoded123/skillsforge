@@ -1,11 +1,13 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import type { ExpensesService } from '../expenses/expenses.service.js';
 import { CategoriesService } from './categories.service.js';
 
 describe('CategoriesService', () => {
   let service: CategoriesService;
 
   beforeEach(() => {
-    service = new CategoriesService();
+    const noExpenses = { countInCategory: () => 0 } as unknown as ExpensesService;
+    service = new CategoriesService(noExpenses);
   });
 
   it('rejects a duplicate name for the same user', () => {

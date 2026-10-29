@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { CategoriesService } from '../categories/categories.service.js';
 import { CreateExpenseDto } from './dto/create-expense.dto.js';
@@ -9,7 +14,10 @@ import { Expense } from './entities/expense.entity.js';
 export class ExpensesService {
   private readonly expenses = new Map<string, Expense>();
 
-  constructor(private readonly categoriesService: CategoriesService) {}
+  constructor(
+    @Inject(forwardRef(() => CategoriesService))
+    private readonly categoriesService: CategoriesService,
+  ) {}
 
   create(userId: string, dto: CreateExpenseDto): Expense {
     // Throws 404 when the category is missing or belongs to another user.
@@ -52,6 +60,10 @@ export class ExpensesService {
     if (dto.date !== undefined) expense.date = new Date(dto.date);
     if (dto.paymentMethod !== undefined) expense.paymentMethod = dto.paymentMethod;
     return expense;
+  }
+
+  countInCategory(userId: string, categoryId: string): number {
+    return this.findAll(userId).filter((e) => e.categoryId === categoryId).length;
   }
 
   remove(userId: string, id: string): void {
