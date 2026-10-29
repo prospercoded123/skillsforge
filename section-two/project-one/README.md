@@ -1,124 +1,111 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Expense Tracker API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS API where each user logs personal expenses, organises them into categories, filters and sorts them, and tracks monthly spending against a budget. Data is kept in memory, so it resets when the server restarts.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This is Section Two, Project One of the SkillsForge backend assignment.
 
-## Description
+## Setup
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+Tested with Node.js 24.
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+Optional environment variables:
+
+| Variable     | Default               | Purpose                                  |
+| ------------ | --------------------- | ---------------------------------------- |
+| `PORT`       | `3000`                | HTTP port                                |
+| `JWT_SECRET` | `dev-only-secret`     | Signs login tokens. Set it outside dev.  |
+
+## Run
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run start:dev    # watch mode
+npm run start:prod   # after npm run build
 ```
 
-## Run tests
+API documentation (Swagger UI) is at **http://localhost:3000/api**. Use the **Authorize** button with the token returned by `/auth/login` or `/auth/register`.
+
+To import the API into Postman, open the running app's `http://localhost:3000/api-json` and import it as an OpenAPI file.
+
+## Tests
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm test            # unit tests (service logic)
+npm run test:e2e    # end-to-end tests (HTTP routes through the real app)
+npm run lint        # oxlint with type-aware rules
+npm run format      # Prettier
 ```
 
-## Deployment
+## Endpoints
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+All endpoints except `/auth/*` require `Authorization: Bearer <token>`. Every user only sees and changes their own data.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+| Method | Path                     | Description                                              |
+| ------ | ------------------------ | -------------------------------------------------------- |
+| POST   | `/auth/register`         | Create an account, returns `accessToken`                 |
+| POST   | `/auth/login`            | Log in, returns `accessToken`                            |
+| POST   | `/categories`            | Create a category                                        |
+| GET    | `/categories`            | List your categories                                     |
+| GET    | `/categories/:id`        | Get one category                                         |
+| PATCH  | `/categories/:id`        | Rename a category                                        |
+| DELETE | `/categories/:id`        | Delete a category (rejected while expenses still use it) |
+| POST   | `/expenses`              | Log an expense                                           |
+| GET    | `/expenses`              | List expenses, with filters, sorting and pagination      |
+| GET    | `/expenses/summary`      | Total spent, and total per category, for the same filters |
+| GET    | `/expenses/:id`          | Get one expense                                          |
+| PATCH  | `/expenses/:id`          | Update an expense                                        |
+| DELETE | `/expenses/:id`          | Delete an expense                                        |
+| PUT    | `/budgets/:month`        | Set the budget for a month (`YYYY-MM`)                   |
+| GET    | `/budgets/:month`        | Spent, remaining and `exceeded` flag for that month      |
+| DELETE | `/budgets/:month`        | Remove the budget for a month                            |
+| GET    | `/reports/expenses`      | Export expenses as JSON (default) or CSV (`?format=csv`) |
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+### Filters and sorting
+
+`GET /expenses`, `GET /expenses/summary` and `GET /reports/expenses` accept these query parameters:
+
+- `categoryId`: only expenses in this category
+- `paymentMethod`: `cash`, `card`, `bank_transfer` or `mobile_wallet`
+- `from` and `to`: inclusive date range, as `YYYY-MM-DD`
+- `sortBy`: `date` (default) or `amount`
+- `order`: `desc` (default) or `asc`
+
+`GET /expenses` also takes `page` (default `1`) and `limit` (default `20`, max `100`). It responds with `{ data, total, page, limit }`, where `total` counts every match, not just the current page.
+
+## Program logic
+
+**Ownership.** Every category, expense and budget stores the id of the user who created it. Requests for another user's records return `404`, so their existence is not revealed. Category names are unique per user.
+
+**Expenses must use your own category.** Creating or moving an expense into a category that belongs to someone else returns `404`.
+
+**Deleting a category.** A category that still has expenses cannot be deleted. The API returns `409 Conflict`. Delete or move those expenses first. This prevents orphaned expenses.
+
+**Summaries.** `total` is the sum of matching expenses. `byCategory` groups the same expenses by category. Totals are rounded to two decimal places.
+
+**Budgets.** A budget applies to one calendar month. `spent` is the sum of that month's expenses, `remaining` is `limit - spent`, and `exceeded` is `true` when `spent` is greater than `limit`. Expenses are not blocked when a budget is exceeded. The flag is informational.
+
+**Authentication.** Passwords are hashed with bcrypt (via `bcryptjs`). Tokens are JWTs that expire after one hour. A global guard requires a valid token on every route, except the two `/auth` routes, which are marked `@Public()`.
+
+**Validation.** Request bodies and queries are validated with `class-validator`. Unknown fields are rejected with `400`.
+
+## Project layout
+
+```
+src/
+  main.ts              starts the app
+  app-setup.ts         validation pipe and Swagger, shared with the e2e tests
+  app.module.ts        imports every feature module
+  auth/                register, login, JWT strategy, global guard
+  users/               user store used by auth
+  categories/          category CRUD
+  expenses/            expense CRUD, filters, sorting, summary
+  budgets/             monthly budgets and the exceeded flag
+  reports/             CSV and JSON export
+  common/              shared pagination and money helpers
+test/                  e2e tests
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project:
-
-```bash
-$ npm install @nestjs/observe
-```
-
-Then follow the [setup guide](https://docs.nestjs.com/observability/overview) - it takes a single import and an app key.
-
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Each feature folder follows the same pattern: a controller for HTTP, a service for the rules, and `dto/` for validated input.
