@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { Expense } from '../expenses/entities/expense.entity.js';
 import { ExpenseQueryDto } from '../expenses/dto/expense-query.dto.js';
+import { Expense } from '../expenses/entities/expense.entity.js';
 import { ExpenseSummary } from '../expenses/expense-summary.js';
 import { ExpensesService } from '../expenses/expenses.service.js';
+import { renderExpenseReportPdf } from './expense-report-pdf.js';
 
 export interface ExpenseReportRow {
   id: string;
@@ -47,6 +48,11 @@ export class ReportsService {
     });
     return [CSV_HEADERS.join(','), ...lines].join('\n');
   }
+
+  async toPdf(userId: string, query: ExpenseQueryDto): Promise<Buffer> {
+    const report = await this.toJson(userId, query);
+    return renderExpenseReportPdf(report, periodLabel(query));
+  }
 }
 
 function toRow(expense: Expense): ExpenseReportRow {
@@ -58,6 +64,12 @@ function toRow(expense: Expense): ExpenseReportRow {
     date: expense.date,
     paymentMethod: expense.paymentMethod,
   };
+}
+
+function periodLabel(query: ExpenseQueryDto): string {
+  if (query.month) return query.month;
+  if (query.from || query.to) return `${query.from ?? 'start'} to ${query.to ?? 'today'}`;
+  return 'All dates';
 }
 
 // Quotes every cell and doubles inner quotes so commas and quotes in titles stay safe.

@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Controller, Get, Query, Res, StreamableFile } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { AuthUser } from '../auth/auth-user.js';
@@ -14,17 +14,21 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('expenses')
-  exportExpenses(
+  async exportExpenses(
     @CurrentUser() user: AuthUser,
     @Query() query: ExportExpensesQueryDto,
     @Res({ passthrough: true }) res: Response,
   ) {
+    if (query.format === ExportFormat.PDF) {
+      const pdf = await this.reportsService.toPdf(user.id, query);
+      return new StreamableFile(pdf, {
+        type: 'application/pdf',
+        disposition: 'attachment; filename="expenses.pdf"',
+      });
+    }
     if (query.format === ExportFormat.CSV) {
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader(
-        'Content-Disposition',
-        'attachment; filename="expenses.csv"',
-      );
+      res.setHeader('Content-Disposition', 'attachment; filename="expenses.csv"');
       return this.reportsService.toCsv(user.id, query);
     }
     return this.reportsService.toJson(user.id, query);

@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+
 import { resetDatabase } from './helpers/reset-database.js';
 import {
   createCategory,
@@ -8,6 +9,13 @@ import {
   registerUser,
   TestUser,
 } from './helpers/test-app.js';
+
+// Collects the raw bytes of a binary response so the PDF can be inspected.
+const binaryParser = (res: NodeJS.ReadableStream, callback: (error: Error | null, body: Buffer) => void) => {
+  const chunks: Buffer[] = [];
+  res.on('data', (chunk: Buffer) => chunks.push(chunk));
+  res.on('end', () => callback(null, Buffer.concat(chunks)));
+};
 
 describe('Reports (e2e)', () => {
   let app: INestApplication;
@@ -59,5 +67,18 @@ describe('Reports (e2e)', () => {
     expect(header).toBe('id,title,amount,category,date,payment_method');
     expect(row).toContain('"Lunch, with ""friends"""');
     expect(row).toMatch(/"12.5","Food","2026-10-01","card"$/);
+  });
+
+  it('exports a PDF download', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/reports/expenses?format=pdf')
+      .set(user.headers)
+      .buffer(true)
+      .parse(binaryParser)
+      .expect(200);
+
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.headers['content-disposition']).toContain('expenses.pdf');
+    expect((res.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
   });
 });
