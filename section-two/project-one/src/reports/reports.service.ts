@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CategoriesService } from '../categories/categories.service.js';
-import { ExpenseQueryDto } from '../expenses/dto/expense-query.dto.js';
 import { Expense } from '../expenses/entities/expense.entity.js';
+import { ExpenseQueryDto } from '../expenses/dto/expense-query.dto.js';
 import { ExpenseSummary } from '../expenses/expense-summary.js';
 import { ExpensesService } from '../expenses/expenses.service.js';
 
@@ -20,55 +19,45 @@ export interface ExpenseReport {
   expenses: ExpenseReportRow[];
 }
 
-const CSV_HEADERS = [
-  'id',
-  'title',
-  'amount',
-  'category',
-  'date',
-  'payment_method',
-];
+const CSV_HEADERS = ['id', 'title', 'amount', 'category', 'date', 'payment_method'];
 
 @Injectable()
 export class ReportsService {
-  constructor(
-    private readonly expensesService: ExpensesService,
-    private readonly categoriesService: CategoriesService,
-  ) {}
+  constructor(private readonly expensesService: ExpensesService) {}
 
-  toJson(userId: string, query: ExpenseQueryDto): ExpenseReport {
+  async toJson(userId: string, query: ExpenseQueryDto): Promise<ExpenseReport> {
+    const [summary, expenses] = await Promise.all([
+      this.expensesService.summary(userId, query),
+      this.expensesService.list(userId, query),
+    ]);
     return {
       generatedAt: new Date().toISOString(),
-      summary: this.expensesService.summary(userId, query),
-      expenses: this.rows(userId, query),
+      summary,
+      expenses: expenses.map(toRow),
     };
   }
 
-  toCsv(userId: string, query: ExpenseQueryDto): string {
-    const lines = this.rows(userId, query).map((row) =>
-      [row.id, row.title, row.amount, row.category, row.date, row.paymentMethod]
+  async toCsv(userId: string, query: ExpenseQueryDto): Promise<string> {
+    const expenses = await this.expensesService.list(userId, query);
+    const lines = expenses.map((expense) => {
+      const row = toRow(expense);
+      return [row.id, row.title, row.amount, row.category, row.date, row.paymentMethod]
         .map(csvCell)
-        .join(','),
-    );
+        .join(',');
+    });
     return [CSV_HEADERS.join(','), ...lines].join('\n');
   }
+}
 
-  private rows(userId: string, query: ExpenseQueryDto): ExpenseReportRow[] {
-    return this.expensesService
-      .list(userId, query)
-      .map((expense) => this.toRow(userId, expense));
-  }
-
-  private toRow(userId: string, expense: Expense): ExpenseReportRow {
-    return {
-      id: expense.id,
-      title: expense.title,
-      amount: expense.amount,
-      category: this.categoriesService.findOne(userId, expense.categoryId).name,
-      date: expense.date.toISOString().slice(0, 10),
-      paymentMethod: expense.paymentMethod,
-    };
-  }
+function toRow(expense: Expense): ExpenseReportRow {
+  return {
+    id: expense.id,
+    title: expense.title,
+    amount: expense.amount,
+    category: expense.category.name,
+    date: expense.date,
+    paymentMethod: expense.paymentMethod,
+  };
 }
 
 // Quotes every cell and doubles inner quotes so commas and quotes in titles stay safe.

@@ -1,137 +1,132 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { CategoriesService } from '../categories/categories.service.js';
-import { CreateExpenseDto } from './dto/create-expense.dto.js';
-import { PaginatedResult } from '../common/paginated-result.js';
 import { roundMoney } from '../common/money.js';
+import { PaginatedResult } from '../common/paginated-result.js';
+import { CreateExpenseDto } from './dto/create-expense.dto.js';
 import { ExpenseListQueryDto } from './dto/expense-list-query.dto.js';
 import { ExpenseQueryDto } from './dto/expense-query.dto.js';
 import { UpdateExpenseDto } from './dto/update-expense.dto.js';
 import { Expense } from './entities/expense.entity.js';
-import type { ExpenseSummary } from './expense-summary.js';
 import { SortField, SortOrder } from './enums/sort.enum.js';
+import { ExpenseSummary } from './expense-summary.js';
+
+const SORT_COLUMNS: Record<SortField, string> = {
+  [SortField.DATE]: 'expense.date',
+  [SortField.AMOUNT]: 'expense.amount',
+};
 
 @Injectable()
 export class ExpensesService {
-  private readonly expenses = new Map<string, Expense>();
+  constructor(
+    @InjectRepository(Expense)
+    private readonly expenses: Repository<Expense>,
+    private readonly categoriesService: CategoriesService,
+  ) {}
 
-  constructor(private readonly categoriesService: CategoriesService) {}
-
-  create(userId: string, dto: CreateExpenseDto): Expense {
+  async create(userId: string, dto: CreateExpenseDto): Promise<Expense> {
     // Throws 404 when the category is missing or belongs to another user.
-    this.categoriesService.findOne(userId, dto.categoryId);
+    await this.categoriesService.findOne(userId, dto.categoryId);
 
-    const expense: Expense = {
-      id: randomUUID(),
-      userId,
-      title: dto.title,
-      amount: dto.amount,
-      categoryId: dto.categoryId,
-      date: new Date(dto.date),
-      paymentMethod: dto.paymentMethod,
-      createdAt: new Date(),
-    };
-    this.expenses.set(expense.id, expense);
-    this.categoriesService.adjustUsage(dto.categoryId, 1);
-    return expense;
+    return this.expenses.save(
+      this.expenses.create({
+        userId,
+        title: dto.title,
+        amount: dto.amount,
+        categoryId: dto.categoryId,
+        date: dto.date,
+        paymentMethod: dto.paymentMethod,
+      }),
+    );
   }
 
-  findAll(
-    userId: string,
-    query: ExpenseListQueryDto,
-  ): PaginatedResult<Expense> {
-    const matching = this.list(userId, query);
-    const start = (query.page - 1) * query.limit;
-    return {
-      data: matching.slice(start, start + query.limit),
-      total: matching.length,
-      page: query.page,
-      limit: query.limit,
-    };
+  async findAll(userId: string, query: ExpenseListQueryDto): Promise<PaginatedResult<Expense>> {
+    const [data, total] = await this.sorted(this.filtered(userId, query), query)
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return { data, total, page: query.page, limit: query.limit };
   }
 
-  // All matching expenses, sorted, without pagination.
-  list(userId: string, query: ExpenseQueryDto): Expense[] {
-    const matching = this.ownedBy(userId).filter((e) => this.matches(e, query));
-    return this.sort(matching, query.sortBy, query.order);
+  // All matching expenses with their category, without pagination.
+  list(userId: string, query: ExpenseQueryDto): Promise<Expense[]> {
+    const qb = this.filtered(userId, query).innerJoinAndSelect('expense.category', 'category');
+    return this.sorted(qb, query).getMany();
   }
 
-  findOne(userId: string, id: string): Expense {
-    const expense = this.expenses.get(id);
-    if (!expense || expense.userId !== userId) {
+  async findOne(userId: string, id: string): Promise<Expense> {
+    const expense = await this.expenses.findOneBy({ id, userId });
+    if (!expense) {
       throw new NotFoundException('Expense not found');
     }
     return expense;
   }
 
-  update(userId: string, id: string, dto: UpdateExpenseDto): Expense {
-    const expense = this.findOne(userId, id);
-    if (dto.categoryId !== undefined && dto.categoryId !== expense.categoryId) {
-      this.categoriesService.findOne(userId, dto.categoryId);
-      this.categoriesService.adjustUsage(expense.categoryId, -1);
-      this.categoriesService.adjustUsage(dto.categoryId, 1);
+  async update(userId: string, id: string, dto: UpdateExpenseDto): Promise<Expense> {
+    const expense = await this.findOne(userId, id);
+    if (dto.categoryId !== undefined) {
+      await this.categoriesService.findOne(userId, dto.categoryId);
       expense.categoryId = dto.categoryId;
     }
     if (dto.title !== undefined) expense.title = dto.title;
     if (dto.amount !== undefined) expense.amount = dto.amount;
-    if (dto.date !== undefined) expense.date = new Date(dto.date);
-    if (dto.paymentMethod !== undefined)
-      expense.paymentMethod = dto.paymentMethod;
-    return expense;
+    if (dto.date !== undefined) expense.date = dto.date;
+    if (dto.paymentMethod !== undefined) expense.paymentMethod = dto.paymentMethod;
+    return this.expenses.save(expense);
   }
 
-  summary(userId: string, query: ExpenseQueryDto): ExpenseSummary {
-    const matching = this.ownedBy(userId).filter((e) => this.matches(e, query));
-    const totals = new Map<string, number>();
-    for (const expense of matching) {
-      totals.set(
-        expense.categoryId,
-        (totals.get(expense.categoryId) ?? 0) + expense.amount,
-      );
-    }
+  async remove(userId: string, id: string): Promise<void> {
+    const expense = await this.findOne(userId, id);
+    await this.expenses.remove(expense);
+  }
 
+  async summary(userId: string, query: ExpenseQueryDto): Promise<ExpenseSummary> {
+    const rows = await this.filtered(userId, query)
+      .innerJoin('expense.category', 'category')
+      .select('expense.categoryId', 'categoryId')
+      .addSelect('category.name', 'categoryName')
+      .addSelect('SUM(expense.amount)', 'total')
+      .groupBy('expense.categoryId')
+      .addGroupBy('category.name')
+      .getRawMany<{ categoryId: string; categoryName: string; total: string }>();
+
+    const byCategory = rows.map((row) => ({
+      categoryId: row.categoryId,
+      categoryName: row.categoryName,
+      total: roundMoney(Number(row.total)),
+    }));
     return {
-      total: roundMoney(matching.reduce((sum, e) => sum + e.amount, 0)),
-      byCategory: [...totals].map(([categoryId, total]) => ({
-        categoryId,
-        categoryName: this.categoriesService.findOne(userId, categoryId).name,
-        total: roundMoney(total),
-      })),
+      total: roundMoney(byCategory.reduce((sum, row) => sum + row.total, 0)),
+      byCategory,
     };
   }
 
-  remove(userId: string, id: string): void {
-    const expense = this.findOne(userId, id);
-    this.expenses.delete(id);
-    this.categoriesService.adjustUsage(expense.categoryId, -1);
+  private filtered(userId: string, query: ExpenseQueryDto): SelectQueryBuilder<Expense> {
+    const qb = this.expenses
+      .createQueryBuilder('expense')
+      .where('expense.userId = :userId', { userId });
+
+    if (query.categoryId) {
+      qb.andWhere('expense.categoryId = :categoryId', { categoryId: query.categoryId });
+    }
+    if (query.paymentMethod) {
+      qb.andWhere('expense.paymentMethod = :paymentMethod', {
+        paymentMethod: query.paymentMethod,
+      });
+    }
+    if (query.from) {
+      qb.andWhere('expense.date >= :from', { from: query.from });
+    }
+    if (query.to) {
+      qb.andWhere('expense.date <= :to', { to: query.to });
+    }
+    return qb;
   }
 
-  private ownedBy(userId: string): Expense[] {
-    return [...this.expenses.values()].filter((e) => e.userId === userId);
-  }
-
-  private matches(expense: Expense, query: ExpenseQueryDto): boolean {
-    if (query.categoryId && expense.categoryId !== query.categoryId)
-      return false;
-    if (query.paymentMethod && expense.paymentMethod !== query.paymentMethod)
-      return false;
-    if (query.from && expense.date < new Date(query.from)) return false;
-    if (query.to && expense.date > new Date(query.to)) return false;
-    return true;
-  }
-
-  private sort(
-    expenses: Expense[],
-    sortBy: SortField,
-    order: SortOrder,
-  ): Expense[] {
-    const direction = order === SortOrder.ASC ? 1 : -1;
-    return [...expenses].sort((a, b) => {
-      const diff =
-        sortBy === SortField.AMOUNT
-          ? a.amount - b.amount
-          : a.date.getTime() - b.date.getTime();
-      return diff * direction;
-    });
+  // The id tie-breaker keeps pages stable when two expenses share a date or amount.
+  private sorted(qb: SelectQueryBuilder<Expense>, query: ExpenseQueryDto): SelectQueryBuilder<Expense> {
+    const direction = query.order === SortOrder.ASC ? 'ASC' : 'DESC';
+    return qb.orderBy(SORT_COLUMNS[query.sortBy], direction).addOrderBy('expense.id', 'ASC');
   }
 }

@@ -34,10 +34,7 @@ export class CategoriesController {
   }
 
   @Get(':id')
-  findOne(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  findOne(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.findOne(user.id, id);
   }
 
@@ -52,10 +49,7 @@ export class CategoriesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    this.categoriesService.remove(user.id, id);
+  remove(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.categoriesService.remove(user.id, id);
   }
 }

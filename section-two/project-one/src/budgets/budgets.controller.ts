@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -21,29 +22,43 @@ import { ParseMonthPipe } from './pipes/parse-month.pipe.js';
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
 
+  @Get(':month')
+  findForMonth(@CurrentUser() user: AuthUser, @Param('month', ParseMonthPipe) month: string) {
+    return this.budgetsService.findForMonth(user.id, month);
+  }
+
   @Put(':month')
-  set(
+  setOverall(
     @CurrentUser() user: AuthUser,
     @Param('month', ParseMonthPipe) month: string,
     @Body() dto: SetBudgetDto,
   ) {
-    return this.budgetsService.set(user.id, month, dto.limit);
-  }
-
-  @Get(':month')
-  status(
-    @CurrentUser() user: AuthUser,
-    @Param('month', ParseMonthPipe) month: string,
-  ) {
-    return this.budgetsService.status(user.id, month);
+    return this.budgetsService.setOverall(user.id, month, dto.limit);
   }
 
   @Delete(':month')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
+  removeOverall(@CurrentUser() user: AuthUser, @Param('month', ParseMonthPipe) month: string) {
+    return this.budgetsService.removeOverall(user.id, month);
+  }
+
+  @Put(':month/categories/:categoryId')
+  setForCategory(
     @CurrentUser() user: AuthUser,
     @Param('month', ParseMonthPipe) month: string,
+    @Param('categoryId', ParseUUIDPipe) categoryId: string,
+    @Body() dto: SetBudgetDto,
   ) {
-    this.budgetsService.remove(user.id, month);
+    return this.budgetsService.setForCategory(user.id, categoryId, month, dto.limit);
+  }
+
+  @Delete(':month/categories/:categoryId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeForCategory(
+    @CurrentUser() user: AuthUser,
+    @Param('month', ParseMonthPipe) month: string,
+    @Param('categoryId', ParseUUIDPipe) categoryId: string,
+  ) {
+    return this.budgetsService.removeForCategory(user.id, categoryId, month);
   }
 }

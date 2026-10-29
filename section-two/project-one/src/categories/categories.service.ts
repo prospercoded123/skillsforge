@@ -3,68 +3,69 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import {
+  FOREIGN_KEY_VIOLATION,
+  hasPostgresCode,
+  UNIQUE_VIOLATION,
+} from '../common/database/postgres-errors.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { Category } from './entities/category.entity.js';
 
 @Injectable()
 export class CategoriesService {
-  private readonly categories = new Map<string, Category>();
-  // How many expenses reference each category. Kept up to date by ExpensesService,
-  // so this module does not need to import the expenses module.
-  private readonly usage = new Map<string, number>();
+  constructor(
+    @InjectRepository(Category)
+    private readonly categories: Repository<Category>,
+  ) {}
 
-  create(userId: string, dto: CreateCategoryDto): Category {
-    this.assertNameAvailable(userId, dto.name);
-
-    const category: Category = {
-      id: randomUUID(),
-      userId,
-      name: dto.name,
-      createdAt: new Date(),
-    };
-    this.categories.set(category.id, category);
-    return category;
+  create(userId: string, dto: CreateCategoryDto): Promise<Category> {
+    return this.save(this.categories.create({ userId, name: dto.name }));
   }
 
-  findAll(userId: string): Category[] {
-    return [...this.categories.values()].filter((c) => c.userId === userId);
+  findAll(userId: string): Promise<Category[]> {
+    return this.categories.find({ where: { userId }, order: { name: 'ASC' } });
   }
 
-  findOne(userId: string, id: string): Category {
-    const category = this.categories.get(id);
-    if (!category || category.userId !== userId) {
+  async findOne(userId: string, id: string): Promise<Category> {
+    const category = await this.categories.findOneBy({ id, userId });
+    if (!category) {
       throw new NotFoundException('Category not found');
     }
     return category;
   }
 
-  update(userId: string, id: string, dto: UpdateCategoryDto): Category {
-    const category = this.findOne(userId, id);
-    if (dto.name !== undefined && dto.name !== category.name) {
-      this.assertNameAvailable(userId, dto.name);
+  async update(userId: string, id: string, dto: UpdateCategoryDto): Promise<Category> {
+    const category = await this.findOne(userId, id);
+    if (dto.name !== undefined) {
       category.name = dto.name;
     }
-    return category;
+    return this.save(category);
   }
 
-  remove(userId: string, id: string): void {
-    this.findOne(userId, id);
-    if ((this.usage.get(id) ?? 0) > 0) {
-      throw new ConflictException('Category still has expenses');
+  async remove(userId: string, id: string): Promise<void> {
+    const category = await this.findOne(userId, id);
+    try {
+      await this.categories.remove(category);
+    } catch (error) {
+      // Expenses reference categories with ON DELETE RESTRICT, so Postgres refuses the delete.
+      if (hasPostgresCode(error, FOREIGN_KEY_VIOLATION)) {
+        throw new ConflictException('Category still has expenses');
+      }
+      throw error;
     }
-    this.categories.delete(id);
   }
 
-  adjustUsage(categoryId: string, delta: number): void {
-    this.usage.set(categoryId, (this.usage.get(categoryId) ?? 0) + delta);
-  }
-
-  private assertNameAvailable(userId: string, name: string): void {
-    const taken = this.findAll(userId).some((c) => c.name === name);
-    if (taken) {
-      throw new ConflictException('Category name already exists');
+  private async save(category: Category): Promise<Category> {
+    try {
+      return await this.categories.save(category);
+    } catch (error) {
+      if (hasPostgresCode(error, UNIQUE_VIOLATION)) {
+        throw new ConflictException('Category name already exists');
+      }
+      throw error;
     }
   }
 }

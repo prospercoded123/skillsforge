@@ -1,70 +1,88 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import { roundMoney } from '../common/money.js';
-import { ExpenseQueryDto } from '../expenses/dto/expense-query.dto.js';
-import { ExpensesService } from '../expenses/expenses.service.js';
-import { Budget } from './entities/budget.entity.js';
-import type { BudgetStatus } from './budget-status.js';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CategoriesService } from '../categories/categories.service.js';
+import { CategoryBudget } from './entities/category-budget.entity.js';
+import { MonthlyBudget } from './entities/monthly-budget.entity.js';
+
+export interface CategoryLimit {
+  categoryId: string;
+  categoryName: string;
+  limit: number;
+}
+
+export interface MonthBudgets {
+  month: string;
+  overall: number | null;
+  categories: CategoryLimit[];
+}
 
 @Injectable()
 export class BudgetsService {
-  private readonly budgets = new Map<string, Budget>();
+  constructor(
+    @InjectRepository(MonthlyBudget)
+    private readonly monthlyBudgets: Repository<MonthlyBudget>,
+    @InjectRepository(CategoryBudget)
+    private readonly categoryBudgets: Repository<CategoryBudget>,
+    private readonly categoriesService: CategoriesService,
+  ) {}
 
-  constructor(private readonly expensesService: ExpensesService) {}
+  async setOverall(userId: string, month: string, limit: number): Promise<MonthlyBudget> {
+    const budget =
+      (await this.monthlyBudgets.findOneBy({ userId, month })) ??
+      this.monthlyBudgets.create({ userId, month });
+    budget.limitAmount = limit;
+    return this.monthlyBudgets.save(budget);
+  }
 
-  set(userId: string, month: string, limit: number): Budget {
-    const existing = this.findBudget(userId, month);
-    if (existing) {
-      existing.limit = limit;
-      return existing;
+  async removeOverall(userId: string, month: string): Promise<void> {
+    const result = await this.monthlyBudgets.delete({ userId, month });
+    if (!result.affected) {
+      throw new NotFoundException('No budget set for this month');
     }
-
-    const budget: Budget = { id: randomUUID(), userId, month, limit };
-    this.budgets.set(budget.id, budget);
-    return budget;
   }
 
-  remove(userId: string, month: string): void {
-    const budget = this.requireBudget(userId, month);
-    this.budgets.delete(budget.id);
+  async setForCategory(
+    userId: string,
+    categoryId: string,
+    month: string,
+    limit: number,
+  ): Promise<CategoryBudget> {
+    // Throws 404 when the category is missing or belongs to another user.
+    await this.categoriesService.findOne(userId, categoryId);
+
+    const budget =
+      (await this.categoryBudgets.findOneBy({ userId, categoryId, month })) ??
+      this.categoryBudgets.create({ userId, categoryId, month });
+    budget.limitAmount = limit;
+    return this.categoryBudgets.save(budget);
   }
 
-  status(userId: string, month: string): BudgetStatus {
-    const budget = this.requireBudget(userId, month);
-    const query = Object.assign(new ExpenseQueryDto(), monthRange(month));
-    const { total: spent } = this.expensesService.summary(userId, query);
+  async removeForCategory(userId: string, categoryId: string, month: string): Promise<void> {
+    const result = await this.categoryBudgets.delete({ userId, categoryId, month });
+    if (!result.affected) {
+      throw new NotFoundException('No budget set for this category and month');
+    }
+  }
+
+  async findForMonth(userId: string, month: string): Promise<MonthBudgets> {
+    const [overall, categories] = await Promise.all([
+      this.monthlyBudgets.findOneBy({ userId, month }),
+      this.categoryBudgets.find({
+        where: { userId, month },
+        relations: { category: true },
+        order: { category: { name: 'ASC' } },
+      }),
+    ]);
 
     return {
       month,
-      limit: budget.limit,
-      spent,
-      remaining: roundMoney(budget.limit - spent),
-      exceeded: spent > budget.limit,
+      overall: overall?.limitAmount ?? null,
+      categories: categories.map((budget) => ({
+        categoryId: budget.categoryId,
+        categoryName: budget.category.name,
+        limit: budget.limitAmount,
+      })),
     };
   }
-
-  private requireBudget(userId: string, month: string): Budget {
-    const budget = this.findBudget(userId, month);
-    if (!budget) {
-      throw new NotFoundException('No budget set for this month');
-    }
-    return budget;
-  }
-
-  private findBudget(userId: string, month: string): Budget | undefined {
-    return [...this.budgets.values()].find(
-      (b) => b.userId === userId && b.month === month,
-    );
-  }
-}
-
-// First and last day of a YYYY-MM month, as YYYY-MM-DD strings.
-function monthRange(month: string): { from: string; to: string } {
-  const [year, monthNumber] = month.split('-').map(Number);
-  // Day 0 of the next month is the last day of this one.
-  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  return {
-    from: `${month}-01`,
-    to: `${month}-${String(lastDay).padStart(2, '0')}`,
-  };
 }
