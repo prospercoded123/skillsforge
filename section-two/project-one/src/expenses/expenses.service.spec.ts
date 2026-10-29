@@ -125,3 +125,30 @@ describe('ExpensesService', () => {
     expect(found.map((e) => e.title)).toEqual(['New', 'Old']);
   });
 });
+
+describe('ExpensesService summary', () => {
+  it('totals spending overall and per category', () => {
+    const categories = new CategoriesService({} as ExpensesService);
+    const service = new ExpensesService(categories);
+    const foodId = categories.create('user-1', { name: 'Food' }).id;
+    const transportId = categories.create('user-1', { name: 'Transport' }).id;
+    const base = {
+      title: 'Item',
+      date: '2026-10-01',
+      paymentMethod: PaymentMethod.CARD,
+    };
+    service.create('user-1', { ...base, amount: 10.1, categoryId: foodId });
+    service.create('user-1', { ...base, amount: 5.2, categoryId: foodId });
+    service.create('user-1', { ...base, amount: 3, categoryId: transportId });
+
+    const summary = service.summary('user-1', Object.assign(new ExpenseQueryDto(), {}));
+
+    expect(summary.total).toBe(18.3);
+    expect(summary.byCategory).toEqual(
+      expect.arrayContaining([
+        { categoryId: foodId, categoryName: 'Food', total: 15.3 },
+        { categoryId: transportId, categoryName: 'Transport', total: 3 },
+      ]),
+    );
+  });
+});

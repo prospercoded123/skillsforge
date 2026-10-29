@@ -10,6 +10,7 @@ import { CreateExpenseDto } from './dto/create-expense.dto.js';
 import { ExpenseQueryDto } from './dto/expense-query.dto.js';
 import { UpdateExpenseDto } from './dto/update-expense.dto.js';
 import { Expense } from './entities/expense.entity.js';
+import type { ExpenseSummary } from './expense-summary.js';
 import { SortField, SortOrder } from './enums/sort.enum.js';
 
 @Injectable()
@@ -65,6 +66,23 @@ export class ExpensesService {
     return expense;
   }
 
+  summary(userId: string, query: ExpenseQueryDto): ExpenseSummary {
+    const matching = this.ownedBy(userId).filter((e) => this.matches(e, query));
+    const totals = new Map<string, number>();
+    for (const expense of matching) {
+      totals.set(expense.categoryId, (totals.get(expense.categoryId) ?? 0) + expense.amount);
+    }
+
+    return {
+      total: roundMoney(matching.reduce((sum, e) => sum + e.amount, 0)),
+      byCategory: [...totals].map(([categoryId, total]) => ({
+        categoryId,
+        categoryName: this.categoriesService.findOne(userId, categoryId).name,
+        total: roundMoney(total),
+      })),
+    };
+  }
+
   countInCategory(userId: string, categoryId: string): number {
     return this.ownedBy(userId).filter((e) => e.categoryId === categoryId).length;
   }
@@ -96,4 +114,8 @@ export class ExpensesService {
       return diff * direction;
     });
   }
+}
+
+function roundMoney(amount: number): number {
+  return Math.round(amount * 100) / 100;
 }
