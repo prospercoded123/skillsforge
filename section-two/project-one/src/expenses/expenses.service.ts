@@ -44,15 +44,20 @@ export class ExpensesService {
   }
 
   findAll(userId: string, query: ExpenseListQueryDto): PaginatedResult<Expense> {
-    const matching = this.ownedBy(userId).filter((e) => this.matches(e, query));
-    const sorted = this.sort(matching, query.sortBy, query.order);
+    const matching = this.list(userId, query);
     const start = (query.page - 1) * query.limit;
     return {
-      data: sorted.slice(start, start + query.limit),
-      total: sorted.length,
+      data: matching.slice(start, start + query.limit),
+      total: matching.length,
       page: query.page,
       limit: query.limit,
     };
+  }
+
+  // All matching expenses, sorted, without pagination.
+  list(userId: string, query: ExpenseQueryDto): Expense[] {
+    const matching = this.ownedBy(userId).filter((e) => this.matches(e, query));
+    return this.sort(matching, query.sortBy, query.order);
   }
 
   findOne(userId: string, id: string): Expense {
