@@ -1,4 +1,12 @@
 import { Module } from '@nestjs/common';
+import { CategoriesModule } from '../categories/categories.module.js';
+import { ExpensesController } from './expenses.controller.js';
+import { ExpensesService } from './expenses.service.js';
 
-@Module({})
+@Module({
+  imports: [CategoriesModule],
+  controllers: [ExpensesController],
+  providers: [ExpensesService],
+  exports: [ExpensesService],
+})
 export class ExpensesModule {}
