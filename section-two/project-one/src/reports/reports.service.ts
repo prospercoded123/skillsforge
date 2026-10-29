@@ -89,7 +89,6 @@ function periodLabel(query: ExpenseQueryDto): string {
   return 'All dates';
 }
 
-// Quotes every cell and doubles inner quotes so commas and quotes in titles stay safe.
 function csvCell(value: string | number): string {
   return `"${String(value).replace(/"/g, '""')}"`;
 }

@@ -1,8 +1,5 @@
 {
   "name": "section-one",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node --test two-sum.test.ts"
-  }
+  "type": "module"
 }

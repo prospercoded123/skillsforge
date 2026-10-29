@@ -1,5 +1,3 @@
-// Returns the indices of two numbers in `nums` that add up to `k`.
-// Time O(N), space O(N).
 export function twoSumUnsorted(nums: number[], k: number): [number, number] {
   const indexByValue = new Map<number, number>();
 
@@ -11,5 +9,5 @@ export function twoSumUnsorted(nums: number[], k: number): [number, number] {
     indexByValue.set(nums[i], i);
   }
 
-  throw new Error("No two numbers add up to k");
+  throw new Error('No two numbers add up to k');
 }

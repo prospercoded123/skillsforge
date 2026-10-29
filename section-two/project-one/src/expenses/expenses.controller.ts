@@ -36,7 +36,6 @@ export class ExpensesController {
     return this.expensesService.findAll(user.id, query);
   }
 
-  // Declared before ':id' so 'summary' is not parsed as an expense id.
   @Get('summary')
   summary(@CurrentUser() user: AuthUser, @Query() query: ExpenseQueryDto) {
     return this.expensesService.summary(user.id, query);

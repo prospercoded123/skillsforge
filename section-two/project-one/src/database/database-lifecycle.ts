@@ -14,7 +14,6 @@ const MIGRATIONS_FOLDER = fileURLToPath(
   new URL('../../drizzle', import.meta.url),
 );
 
-// Applies pending migrations on startup and closes the pool on shutdown.
 @Injectable()
 export class DatabaseLifecycle implements OnModuleInit, OnModuleDestroy {
   constructor(

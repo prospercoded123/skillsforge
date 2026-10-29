@@ -11,7 +11,6 @@ export function todayString(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-// Counts whole days since 1970-01-01, so date arithmetic does not depend on timezones.
 function toDayNumber(date: string): number {
   return Date.parse(`${date}T00:00:00Z`) / MS_PER_DAY;
 }
@@ -22,14 +21,12 @@ export function addDays(date: string, days: number): string {
     .slice(0, 10);
 }
 
-// Number of days from `from` to `to`, counting both ends.
 export function daysBetween(from: string, to: string): number {
   return toDayNumber(to) - toDayNumber(from) + 1;
 }
 
 export function monthRange(month: string): DateRange {
   const [year, monthNumber] = month.split('-').map(Number);
-  // Day 0 of the following month is the last day of this one.
   const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
   return {
     from: `${month}-01`,

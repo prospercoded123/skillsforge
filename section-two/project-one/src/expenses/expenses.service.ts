@@ -43,7 +43,6 @@ export class ExpensesService {
   ) {}
 
   async create(userId: string, dto: CreateExpenseDto): Promise<Expense> {
-    // Throws 404 when the category is missing or belongs to another user.
     await this.categoriesService.findOne(userId, dto.categoryId);
 
     const [expense] = await this.db
@@ -78,7 +77,6 @@ export class ExpensesService {
     return { data, total: Number(total), page: query.page, limit: query.limit };
   }
 
-  // All matching expenses with their category name, without pagination.
   list(userId: string, query: ExpenseQueryDto): Promise<ExpenseWithCategory[]> {
     return this.db
       .select({ ...expenseColumns, categoryName: categories.name })
@@ -161,8 +159,6 @@ export class ExpensesService {
     };
   }
 
-  // Analysis covers every expense in the period, ignoring category and payment filters,
-  // so budgets always compare against the full spending for that month.
   private async analyse(userId: string, query: ExpenseQueryDto) {
     const period = this.rangeOf(query);
     const current = period ? await this.list(userId, rangeQuery(period)) : [];
@@ -210,7 +206,6 @@ export class ExpensesService {
     return conditions;
   }
 
-  // The id tie-breaker keeps pages stable when two expenses share a date or amount.
   private ordering(query: ExpenseQueryDto): SQL[] {
     const column =
       query.sortBy === SortField.AMOUNT ? expenses.amount : expenses.date;

@@ -62,13 +62,11 @@ export const expenses = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    // RESTRICT makes Postgres refuse to delete a category that still has expenses.
     categoryId: uuid('category_id')
       .notNull()
       .references(() => categories.id, { onDelete: 'restrict' }),
     title: varchar('title', { length: 100 }).notNull(),
     amount: money('amount').notNull(),
-    // A calendar date (YYYY-MM-DD), so timezones cannot shift it.
     date: date('date', { mode: 'string' }).notNull(),
     paymentMethod: paymentMethod('payment_method').notNull(),
     createdAt: createdAt(),

@@ -8,8 +8,6 @@ import {
   TrendDirection,
 } from './analysis.types.js';
 
-// Compares the first and second half of the period, using spend per day so that
-// halves of different lengths stay comparable.
 export function buildCategoryTrends(
   records: SpendingRecord[],
   period: DateRange | null,

@@ -60,7 +60,6 @@ export class BudgetsService {
     month: string,
     limit: number,
   ): Promise<void> {
-    // Throws 404 when the category is missing or belongs to another user.
     await this.categoriesService.findOne(userId, categoryId);
 
     await this.db

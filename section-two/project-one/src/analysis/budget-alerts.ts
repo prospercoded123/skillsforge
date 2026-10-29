@@ -80,7 +80,6 @@ function buildAlert(
   };
 }
 
-// Spending pace: what the period will total if it keeps going at the rate so far.
 function projectMonthEnd(
   spent: number,
   period: DateRange,

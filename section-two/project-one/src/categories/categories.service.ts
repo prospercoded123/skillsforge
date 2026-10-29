@@ -78,7 +78,6 @@ export class CategoriesService {
     try {
       await this.db.delete(categories).where(eq(categories.id, id));
     } catch (error) {
-      // Expenses reference categories with ON DELETE RESTRICT, so Postgres refuses the delete.
       if (hasPostgresCode(error, FOREIGN_KEY_VIOLATION)) {
         throw new ConflictException('Category still has expenses');
       }

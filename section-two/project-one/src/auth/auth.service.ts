@@ -46,7 +46,6 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
-  // Each refresh token works once. Using it returns a new pair.
   async refresh(refreshToken: string): Promise<AuthTokens> {
     const [stored] = await this.db
       .select()
@@ -57,7 +56,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
     if (stored.revokedAt) {
-      // A reused token probably leaked, so end every session for this user.
       await this.revokeAllFor(stored.userId);
       throw new UnauthorizedException('Refresh token has already been used');
     }
@@ -114,7 +112,6 @@ export class AuthService {
   }
 }
 
-// Refresh tokens are random and high-entropy, so a fast hash is enough to store them safely.
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }

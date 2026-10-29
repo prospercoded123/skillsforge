@@ -64,7 +64,6 @@ function alertSuggestions(alert: BudgetAlert): string[] {
   return lines;
 }
 
-// Only meaningful when a category has more than one expense.
 function dominantExpense(group: SpendingRecord[]): SpendingRecord | undefined {
   if (group.length < 2) {
     return undefined;

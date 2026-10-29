@@ -1,7 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-// Shared by main.ts and the e2e tests so both run the same app configuration.
 export function configureApp(app: INestApplication): void {
   app.useGlobalPipes(
     new ValidationPipe({
