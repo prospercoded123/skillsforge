@@ -1,14 +1,14 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
+import { and, eq, isNull } from 'drizzle-orm';
 import { createHash, randomBytes } from 'node:crypto';
-import { IsNull, Repository } from 'typeorm';
+import { DATABASE } from '../database/database.tokens.js';
+import type { Database } from '../database/database.tokens.js';
+import { refreshTokens, type User } from '../database/schema.js';
 import { UsersService } from '../users/users.service.js';
-import { User } from '../users/entities/user.entity.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
-import { RefreshToken } from './entities/refresh-token.entity.js';
 import { JwtPayload } from './jwt-payload.js';
 
 const REFRESH_TOKEN_DAYS = 30;
@@ -21,10 +21,9 @@ export interface AuthTokens {
 @Injectable()
 export class AuthService {
   constructor(
+    @Inject(DATABASE) private readonly db: Database,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    @InjectRepository(RefreshToken)
-    private readonly refreshTokens: Repository<RefreshToken>,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthTokens> {
@@ -39,7 +38,8 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthTokens> {
     const user = await this.usersService.findByEmail(dto.email.toLowerCase());
     const passwordMatches =
-      user !== null && (await bcrypt.compare(dto.password, user.passwordHash));
+      user !== undefined &&
+      (await bcrypt.compare(dto.password, user.passwordHash));
     if (!user || !passwordMatches) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -48,10 +48,11 @@ export class AuthService {
 
   // Each refresh token works once. Using it returns a new pair.
   async refresh(refreshToken: string): Promise<AuthTokens> {
-    const stored = await this.refreshTokens.findOne({
-      where: { tokenHash: hashToken(refreshToken) },
-      relations: { user: true },
-    });
+    const [stored] = await this.db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.tokenHash, hashToken(refreshToken)))
+      .limit(1);
     if (!stored || stored.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -61,15 +62,28 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token has already been used');
     }
 
-    await this.refreshTokens.update(stored.id, { revokedAt: new Date() });
-    return this.issueTokens(stored.user);
+    await this.db
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(eq(refreshTokens.id, stored.id));
+
+    const user = await this.usersService.findById(stored.userId);
+    if (!user) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    return this.issueTokens(user);
   }
 
   async logout(refreshToken: string): Promise<void> {
-    await this.refreshTokens.update(
-      { tokenHash: hashToken(refreshToken), revokedAt: IsNull() },
-      { revokedAt: new Date() },
-    );
+    await this.db
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(refreshTokens.tokenHash, hashToken(refreshToken)),
+          isNull(refreshTokens.revokedAt),
+        ),
+      );
   }
 
   private async issueTokens(user: User): Promise<AuthTokens> {
@@ -77,13 +91,11 @@ export class AuthService {
     const expiresAt = new Date(
       Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000,
     );
-    await this.refreshTokens.save(
-      this.refreshTokens.create({
-        tokenHash: hashToken(refreshToken),
-        userId: user.id,
-        expiresAt,
-      }),
-    );
+    await this.db.insert(refreshTokens).values({
+      tokenHash: hashToken(refreshToken),
+      userId: user.id,
+      expiresAt,
+    });
 
     const payload: JwtPayload = { sub: user.id, email: user.email };
     return {
@@ -93,10 +105,12 @@ export class AuthService {
   }
 
   private async revokeAllFor(userId: string): Promise<void> {
-    await this.refreshTokens.update(
-      { userId, revokedAt: IsNull() },
-      { revokedAt: new Date() },
-    );
+    await this.db
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)),
+      );
   }
 }
 

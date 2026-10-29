@@ -1,6 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  lte,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { analyzeSpending } from '../analysis/analyze-spending.js';
 import { SpendingRecord } from '../analysis/analysis.types.js';
 import { BudgetsService } from '../budgets/budgets.service.js';
@@ -13,24 +22,22 @@ import {
 } from '../common/dates.js';
 import { roundMoney } from '../common/money.js';
 import { PaginatedResult } from '../common/paginated-result.js';
+import { DATABASE } from '../database/database.tokens.js';
+import type { Database } from '../database/database.tokens.js';
+import { categories, expenses, type Expense } from '../database/schema.js';
 import { CreateExpenseDto } from './dto/create-expense.dto.js';
 import { ExpenseListQueryDto } from './dto/expense-list-query.dto.js';
 import { ExpenseQueryDto } from './dto/expense-query.dto.js';
 import { UpdateExpenseDto } from './dto/update-expense.dto.js';
-import { Expense } from './entities/expense.entity.js';
 import { SortField, SortOrder } from './enums/sort.enum.js';
 import { ExpenseSummary } from './expense-summary.js';
 
-const SORT_COLUMNS: Record<SortField, string> = {
-  [SortField.DATE]: 'expense.date',
-  [SortField.AMOUNT]: 'expense.amount',
-};
+export type ExpenseWithCategory = Expense & { categoryName: string };
 
 @Injectable()
 export class ExpensesService {
   constructor(
-    @InjectRepository(Expense)
-    private readonly expenses: Repository<Expense>,
+    @Inject(DATABASE) private readonly db: Database,
     private readonly categoriesService: CategoriesService,
     private readonly budgetsService: BudgetsService,
   ) {}
@@ -39,40 +46,54 @@ export class ExpensesService {
     // Throws 404 when the category is missing or belongs to another user.
     await this.categoriesService.findOne(userId, dto.categoryId);
 
-    return this.expenses.save(
-      this.expenses.create({
+    const [expense] = await this.db
+      .insert(expenses)
+      .values({
         userId,
         title: dto.title,
         amount: dto.amount,
         categoryId: dto.categoryId,
         date: dto.date,
         paymentMethod: dto.paymentMethod,
-      }),
-    );
+      })
+      .returning();
+    return expense;
   }
 
   async findAll(
     userId: string,
     query: ExpenseListQueryDto,
   ): Promise<PaginatedResult<Expense>> {
-    const [data, total] = await this.sorted(this.filtered(userId, query), query)
-      .skip((query.page - 1) * query.limit)
-      .take(query.limit)
-      .getManyAndCount();
-    return { data, total, page: query.page, limit: query.limit };
+    const where = and(...this.conditions(userId, query));
+    const [data, [{ total }]] = await Promise.all([
+      this.db
+        .select()
+        .from(expenses)
+        .where(where)
+        .orderBy(...this.ordering(query))
+        .limit(query.limit)
+        .offset((query.page - 1) * query.limit),
+      this.db.select({ total: count() }).from(expenses).where(where),
+    ]);
+    return { data, total: Number(total), page: query.page, limit: query.limit };
   }
 
-  // All matching expenses with their category, without pagination.
-  list(userId: string, query: ExpenseQueryDto): Promise<Expense[]> {
-    const qb = this.filtered(userId, query).innerJoinAndSelect(
-      'expense.category',
-      'category',
-    );
-    return this.sorted(qb, query).getMany();
+  // All matching expenses with their category name, without pagination.
+  list(userId: string, query: ExpenseQueryDto): Promise<ExpenseWithCategory[]> {
+    return this.db
+      .select({ ...expenseColumns, categoryName: categories.name })
+      .from(expenses)
+      .innerJoin(categories, eq(categories.id, expenses.categoryId))
+      .where(and(...this.conditions(userId, query)))
+      .orderBy(...this.ordering(query));
   }
 
   async findOne(userId: string, id: string): Promise<Expense> {
-    const expense = await this.expenses.findOneBy({ id, userId });
+    const [expense] = await this.db
+      .select()
+      .from(expenses)
+      .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
+      .limit(1);
     if (!expense) {
       throw new NotFoundException('Expense not found');
     }
@@ -84,45 +105,54 @@ export class ExpensesService {
     id: string,
     dto: UpdateExpenseDto,
   ): Promise<Expense> {
-    const expense = await this.findOne(userId, id);
+    const current = await this.findOne(userId, id);
     if (dto.categoryId !== undefined) {
       await this.categoriesService.findOne(userId, dto.categoryId);
-      expense.categoryId = dto.categoryId;
     }
-    if (dto.title !== undefined) expense.title = dto.title;
-    if (dto.amount !== undefined) expense.amount = dto.amount;
-    if (dto.date !== undefined) expense.date = dto.date;
+
+    const changes: Partial<typeof expenses.$inferInsert> = {};
+    if (dto.categoryId !== undefined) changes.categoryId = dto.categoryId;
+    if (dto.title !== undefined) changes.title = dto.title;
+    if (dto.amount !== undefined) changes.amount = dto.amount;
+    if (dto.date !== undefined) changes.date = dto.date;
     if (dto.paymentMethod !== undefined)
-      expense.paymentMethod = dto.paymentMethod;
-    return this.expenses.save(expense);
+      changes.paymentMethod = dto.paymentMethod;
+    if (Object.keys(changes).length === 0) {
+      return current;
+    }
+
+    const [expense] = await this.db
+      .update(expenses)
+      .set(changes)
+      .where(eq(expenses.id, id))
+      .returning();
+    return expense;
   }
 
   async remove(userId: string, id: string): Promise<void> {
-    const expense = await this.findOne(userId, id);
-    await this.expenses.remove(expense);
+    await this.findOne(userId, id);
+    await this.db.delete(expenses).where(eq(expenses.id, id));
   }
 
   async summary(
     userId: string,
     query: ExpenseQueryDto,
   ): Promise<ExpenseSummary> {
-    const rows = await this.filtered(userId, query)
-      .innerJoin('expense.category', 'category')
-      .select('expense.categoryId', 'categoryId')
-      .addSelect('category.name', 'categoryName')
-      .addSelect('SUM(expense.amount)', 'total')
-      .groupBy('expense.categoryId')
-      .addGroupBy('category.name')
-      .getRawMany<{
-        categoryId: string;
-        categoryName: string;
-        total: string;
-      }>();
+    const rows = await this.db
+      .select({
+        categoryId: expenses.categoryId,
+        categoryName: categories.name,
+        total: sql<number>`coalesce(sum(${expenses.amount}), 0)::float8`,
+      })
+      .from(expenses)
+      .innerJoin(categories, eq(categories.id, expenses.categoryId))
+      .where(and(...this.conditions(userId, query)))
+      .groupBy(expenses.categoryId, categories.name);
 
     const byCategory = rows.map((row) => ({
       categoryId: row.categoryId,
       categoryName: row.categoryName,
-      total: roundMoney(Number(row.total)),
+      total: roundMoney(row.total),
     }));
     return {
       total: roundMoney(byCategory.reduce((sum, row) => sum + row.total, 0)),
@@ -162,58 +192,55 @@ export class ExpensesService {
     return query.from && query.to ? { from: query.from, to: query.to } : null;
   }
 
-  private filtered(
-    userId: string,
-    query: ExpenseQueryDto,
-  ): SelectQueryBuilder<Expense> {
-    const qb = this.expenses
-      .createQueryBuilder('expense')
-      .where('expense.userId = :userId', { userId });
-
+  private conditions(userId: string, query: ExpenseQueryDto): SQL[] {
+    const conditions: SQL[] = [eq(expenses.userId, userId)];
     if (query.categoryId) {
-      qb.andWhere('expense.categoryId = :categoryId', {
-        categoryId: query.categoryId,
-      });
+      conditions.push(eq(expenses.categoryId, query.categoryId));
     }
     if (query.paymentMethod) {
-      qb.andWhere('expense.paymentMethod = :paymentMethod', {
-        paymentMethod: query.paymentMethod,
-      });
+      conditions.push(eq(expenses.paymentMethod, query.paymentMethod));
     }
-
     const { from, to } = query.month ? monthRange(query.month) : query;
     if (from) {
-      qb.andWhere('expense.date >= :from', { from });
+      conditions.push(gte(expenses.date, from));
     }
     if (to) {
-      qb.andWhere('expense.date <= :to', { to });
+      conditions.push(lte(expenses.date, to));
     }
-    return qb;
+    return conditions;
   }
 
   // The id tie-breaker keeps pages stable when two expenses share a date or amount.
-  private sorted(
-    qb: SelectQueryBuilder<Expense>,
-    query: ExpenseQueryDto,
-  ): SelectQueryBuilder<Expense> {
-    const direction = query.order === SortOrder.ASC ? 'ASC' : 'DESC';
-    return qb
-      .orderBy(SORT_COLUMNS[query.sortBy], direction)
-      .addOrderBy('expense.id', 'ASC');
+  private ordering(query: ExpenseQueryDto): SQL[] {
+    const column =
+      query.sortBy === SortField.AMOUNT ? expenses.amount : expenses.date;
+    const direction = query.order === SortOrder.ASC ? asc : desc;
+    return [direction(column), asc(expenses.id)];
   }
 }
+
+const expenseColumns = {
+  id: expenses.id,
+  userId: expenses.userId,
+  categoryId: expenses.categoryId,
+  title: expenses.title,
+  amount: expenses.amount,
+  date: expenses.date,
+  paymentMethod: expenses.paymentMethod,
+  createdAt: expenses.createdAt,
+};
 
 function rangeQuery(range: DateRange): ExpenseQueryDto {
   return Object.assign(new ExpenseQueryDto(), range);
 }
 
-function toSpendingRecord(expense: Expense): SpendingRecord {
+function toSpendingRecord(expense: ExpenseWithCategory): SpendingRecord {
   return {
     id: expense.id,
     title: expense.title,
     amount: expense.amount,
     date: expense.date,
     categoryId: expense.categoryId,
-    categoryName: expense.category.name,
+    categoryName: expense.categoryName,
   };
 }

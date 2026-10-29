@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ExpenseQueryDto } from '../expenses/dto/expense-query.dto.js';
-import { Expense } from '../expenses/entities/expense.entity.js';
 import { ExpenseSummary } from '../expenses/expense-summary.js';
-import { ExpensesService } from '../expenses/expenses.service.js';
+import {
+  ExpensesService,
+  ExpenseWithCategory,
+} from '../expenses/expenses.service.js';
 import { renderExpenseReportPdf } from './expense-report-pdf.js';
 
 export interface ExpenseReportRow {
@@ -69,12 +71,12 @@ export class ReportsService {
   }
 }
 
-function toRow(expense: Expense): ExpenseReportRow {
+function toRow(expense: ExpenseWithCategory): ExpenseReportRow {
   return {
     id: expense.id,
     title: expense.title,
     amount: expense.amount,
-    category: expense.category.name,
+    category: expense.categoryName,
     date: expense.date,
     paymentMethod: expense.paymentMethod,
   };

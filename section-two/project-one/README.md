@@ -33,7 +33,7 @@ npm run start:dev    # watch mode
 npm run start:prod   # after npm run build
 ```
 
-The schema is created from the entities when `NODE_ENV` is not `production`. Swagger UI is at **http://localhost:3000/api**. Click **Authorize** and paste the `accessToken`. To import into Postman, use `http://localhost:3000/api-json`.
+Pending migrations in `drizzle/` are applied automatically at startup. Swagger UI is at **http://localhost:3000/api**. Click **Authorize** and paste the `accessToken`. To import into Postman, use `http://localhost:3000/api-json`.
 
 ## Tests
 
@@ -146,7 +146,7 @@ src/
   main.ts            starts the app
   app-setup.ts       validation pipe and Swagger, shared with the e2e tests
   app.module.ts      imports every feature module
-  database/          TypeORM connection
+  database/          Drizzle schema, connection and migration runner
   auth/              register, login, refresh, logout, JWT strategy, global guard
   users/             user entity and store
   categories/        category CRUD
@@ -158,9 +158,10 @@ src/
 test/                e2e tests and helpers
 ```
 
-Each feature folder follows the same pattern: a controller for HTTP, a service for the rules, and `dto/` for validated input. Services talk to Postgres through TypeORM repositories.
+Each feature folder follows the same pattern: a controller for HTTP, a service for the rules, and `dto/` for validated input. Services query Postgres through Drizzle ORM. The schema lives in `src/database/schema.ts`.
 
-## Production notes
+## Database changes
 
-- Set `NODE_ENV=production`. Schema sync is then off, so generate and run migrations before deploying. Migrations are not included yet.
-- Use long random values for both JWT secrets.
+- Change `src/database/schema.ts`, then run `npm run db:generate` to write a new SQL migration into `drizzle/`.
+- Commit the generated files. Migrations run when the app starts, so deploy the new build to apply them.
+- Use long random values for both JWT secrets in production.
