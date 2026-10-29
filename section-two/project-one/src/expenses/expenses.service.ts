@@ -1,9 +1,4 @@
-import {
-  forwardRef,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { CategoriesService } from '../categories/categories.service.js';
 import { CreateExpenseDto } from './dto/create-expense.dto.js';
@@ -20,10 +15,7 @@ import { SortField, SortOrder } from './enums/sort.enum.js';
 export class ExpensesService {
   private readonly expenses = new Map<string, Expense>();
 
-  constructor(
-    @Inject(forwardRef(() => CategoriesService))
-    private readonly categoriesService: CategoriesService,
-  ) {}
+  constructor(private readonly categoriesService: CategoriesService) {}
 
   create(userId: string, dto: CreateExpenseDto): Expense {
     // Throws 404 when the category is missing or belongs to another user.
@@ -40,6 +32,7 @@ export class ExpensesService {
       createdAt: new Date(),
     };
     this.expenses.set(expense.id, expense);
+    this.categoriesService.adjustUsage(dto.categoryId, 1);
     return expense;
   }
 
@@ -73,8 +66,10 @@ export class ExpensesService {
 
   update(userId: string, id: string, dto: UpdateExpenseDto): Expense {
     const expense = this.findOne(userId, id);
-    if (dto.categoryId !== undefined) {
+    if (dto.categoryId !== undefined && dto.categoryId !== expense.categoryId) {
       this.categoriesService.findOne(userId, dto.categoryId);
+      this.categoriesService.adjustUsage(expense.categoryId, -1);
+      this.categoriesService.adjustUsage(dto.categoryId, 1);
       expense.categoryId = dto.categoryId;
     }
     if (dto.title !== undefined) expense.title = dto.title;
@@ -105,14 +100,10 @@ export class ExpensesService {
     };
   }
 
-  countInCategory(userId: string, categoryId: string): number {
-    return this.ownedBy(userId).filter((e) => e.categoryId === categoryId)
-      .length;
-  }
-
   remove(userId: string, id: string): void {
-    this.findOne(userId, id);
+    const expense = this.findOne(userId, id);
     this.expenses.delete(id);
+    this.categoriesService.adjustUsage(expense.categoryId, -1);
   }
 
   private ownedBy(userId: string): Expense[] {

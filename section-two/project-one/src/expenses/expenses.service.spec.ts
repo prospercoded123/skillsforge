@@ -37,7 +37,7 @@ describe('ExpensesService', () => {
     });
 
   beforeEach(() => {
-    categories = new CategoriesService({} as ExpensesService);
+    categories = new CategoriesService();
     service = new ExpensesService(categories);
     foodId = categories.create('user-1', { name: 'Food' }).id;
     transportId = categories.create('user-1', { name: 'Transport' }).id;

@@ -9,7 +9,7 @@ describe('ReportsService', () => {
   let foodId: string;
 
   beforeEach(() => {
-    const categories = new CategoriesService({} as ExpensesService);
+    const categories = new CategoriesService();
     const expenses = new ExpensesService(categories);
     foodId = categories.create('user-1', { name: 'Food' }).id;
     expenses.create('user-1', {

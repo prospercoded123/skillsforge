@@ -19,7 +19,7 @@ describe('BudgetsService', () => {
     });
 
   beforeEach(() => {
-    const categories = new CategoriesService({} as ExpensesService);
+    const categories = new CategoriesService();
     expenses = new ExpensesService(categories);
     foodId = categories.create('user-1', { name: 'Food' }).id;
     budgets = new BudgetsService(expenses);
