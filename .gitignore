@@ -1,2 +1,4 @@
 *.pdf
 DocInstruction.pdf
+node_modules
+.env
