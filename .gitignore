@@ -2,3 +2,4 @@
 DocInstruction.pdf
 node_modules
 .env
+dist
