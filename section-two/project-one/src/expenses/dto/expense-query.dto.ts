@@ -1,10 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsDateString,
-  IsEnum,
-  IsOptional,
-  IsUUID,
-} from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { PaymentMethod } from '../enums/payment-method.enum.js';
 import { SortField, SortOrder } from '../enums/sort.enum.js';
 

@@ -20,7 +20,14 @@ export interface ExpenseReport {
   expenses: ExpenseReportRow[];
 }
 
-const CSV_HEADERS = ['id', 'title', 'amount', 'category', 'date', 'payment_method'];
+const CSV_HEADERS = [
+  'id',
+  'title',
+  'amount',
+  'category',
+  'date',
+  'payment_method',
+];
 
 @Injectable()
 export class ReportsService {

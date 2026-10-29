@@ -18,7 +18,9 @@ describe('UsersService', () => {
   it('rejects a duplicate email', () => {
     service.create('ana@example.com', 'hash');
 
-    expect(() => service.create('ana@example.com', 'other')).toThrow(ConflictException);
+    expect(() => service.create('ana@example.com', 'other')).toThrow(
+      ConflictException,
+    );
   });
 
   it('throws when the user does not exist', () => {

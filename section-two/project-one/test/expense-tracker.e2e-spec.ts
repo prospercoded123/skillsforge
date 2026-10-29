@@ -72,7 +72,10 @@ describe('Expense tracker (e2e)', () => {
     expect(list.body.data[0].title).toBe('Weekly shop');
 
     // "summary" must not be parsed as an expense id.
-    const summary = await request(server).get('/expenses/summary').set(auth).expect(200);
+    const summary = await request(server)
+      .get('/expenses/summary')
+      .set(auth)
+      .expect(200);
     expect(summary.body.total).toBe(42.5);
     expect(summary.body.byCategory[0]).toMatchObject({
       categoryName: 'Groceries',
@@ -98,10 +101,21 @@ describe('Expense tracker (e2e)', () => {
       })
       .expect(201);
 
-    await request(server).put('/budgets/2026-11').set(auth).send({ limit: 50 }).expect(200);
-    const status = await request(server).get('/budgets/2026-11').set(auth).expect(200);
+    await request(server)
+      .put('/budgets/2026-11')
+      .set(auth)
+      .send({ limit: 50 })
+      .expect(200);
+    const status = await request(server)
+      .get('/budgets/2026-11')
+      .set(auth)
+      .expect(200);
 
-    expect(status.body).toMatchObject({ spent: 80, remaining: -30, exceeded: true });
+    expect(status.body).toMatchObject({
+      spent: 80,
+      remaining: -30,
+      exceeded: true,
+    });
   });
 
   it('exports expenses as CSV with a download header', async () => {
@@ -112,6 +126,8 @@ describe('Expense tracker (e2e)', () => {
 
     expect(res.headers['content-type']).toContain('text/csv');
     expect(res.headers['content-disposition']).toContain('attachment');
-    expect(res.text.split('\n')[0]).toBe('id,title,amount,category,date,payment_method');
+    expect(res.text.split('\n')[0]).toBe(
+      'id,title,amount,category,date,payment_method',
+    );
   });
 });

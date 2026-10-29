@@ -31,13 +31,19 @@ export class BudgetsController {
   }
 
   @Get(':month')
-  status(@CurrentUser() user: AuthUser, @Param('month', ParseMonthPipe) month: string) {
+  status(
+    @CurrentUser() user: AuthUser,
+    @Param('month', ParseMonthPipe) month: string,
+  ) {
     return this.budgetsService.status(user.id, month);
   }
 
   @Delete(':month')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@CurrentUser() user: AuthUser, @Param('month', ParseMonthPipe) month: string) {
+  remove(
+    @CurrentUser() user: AuthUser,
+    @Param('month', ParseMonthPipe) month: string,
+  ) {
     this.budgetsService.remove(user.id, month);
   }
 }

@@ -43,7 +43,10 @@ export class ExpensesService {
     return expense;
   }
 
-  findAll(userId: string, query: ExpenseListQueryDto): PaginatedResult<Expense> {
+  findAll(
+    userId: string,
+    query: ExpenseListQueryDto,
+  ): PaginatedResult<Expense> {
     const matching = this.list(userId, query);
     const start = (query.page - 1) * query.limit;
     return {
@@ -77,7 +80,8 @@ export class ExpensesService {
     if (dto.title !== undefined) expense.title = dto.title;
     if (dto.amount !== undefined) expense.amount = dto.amount;
     if (dto.date !== undefined) expense.date = new Date(dto.date);
-    if (dto.paymentMethod !== undefined) expense.paymentMethod = dto.paymentMethod;
+    if (dto.paymentMethod !== undefined)
+      expense.paymentMethod = dto.paymentMethod;
     return expense;
   }
 
@@ -85,7 +89,10 @@ export class ExpensesService {
     const matching = this.ownedBy(userId).filter((e) => this.matches(e, query));
     const totals = new Map<string, number>();
     for (const expense of matching) {
-      totals.set(expense.categoryId, (totals.get(expense.categoryId) ?? 0) + expense.amount);
+      totals.set(
+        expense.categoryId,
+        (totals.get(expense.categoryId) ?? 0) + expense.amount,
+      );
     }
 
     return {
@@ -99,7 +106,8 @@ export class ExpensesService {
   }
 
   countInCategory(userId: string, categoryId: string): number {
-    return this.ownedBy(userId).filter((e) => e.categoryId === categoryId).length;
+    return this.ownedBy(userId).filter((e) => e.categoryId === categoryId)
+      .length;
   }
 
   remove(userId: string, id: string): void {
@@ -112,14 +120,20 @@ export class ExpensesService {
   }
 
   private matches(expense: Expense, query: ExpenseQueryDto): boolean {
-    if (query.categoryId && expense.categoryId !== query.categoryId) return false;
-    if (query.paymentMethod && expense.paymentMethod !== query.paymentMethod) return false;
+    if (query.categoryId && expense.categoryId !== query.categoryId)
+      return false;
+    if (query.paymentMethod && expense.paymentMethod !== query.paymentMethod)
+      return false;
     if (query.from && expense.date < new Date(query.from)) return false;
     if (query.to && expense.date > new Date(query.to)) return false;
     return true;
   }
 
-  private sort(expenses: Expense[], sortBy: SortField, order: SortOrder): Expense[] {
+  private sort(
+    expenses: Expense[],
+    sortBy: SortField,
+    order: SortOrder,
+  ): Expense[] {
     const direction = order === SortOrder.ASC ? 1 : -1;
     return [...expenses].sort((a, b) => {
       const diff =

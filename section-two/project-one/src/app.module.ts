@@ -6,6 +6,12 @@ import { ExpensesModule } from './expenses/expenses.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 
 @Module({
-  imports: [AuthModule, CategoriesModule, ExpensesModule, BudgetsModule, ReportsModule],
+  imports: [
+    AuthModule,
+    CategoriesModule,
+    ExpensesModule,
+    BudgetsModule,
+    ReportsModule,
+  ],
 })
 export class AppModule {}

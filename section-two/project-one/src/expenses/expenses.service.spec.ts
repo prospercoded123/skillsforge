@@ -50,19 +50,23 @@ describe('ExpensesService', () => {
   });
 
   it('rejects a category that belongs to another user', () => {
-    expect(() => service.create('user-2', {
-      title: 'Lunch',
-      amount: 12.5,
-      categoryId: foodId,
-      date: '2026-10-01',
-      paymentMethod: PaymentMethod.CARD,
-    })).toThrow(NotFoundException);
+    expect(() =>
+      service.create('user-2', {
+        title: 'Lunch',
+        amount: 12.5,
+        categoryId: foodId,
+        date: '2026-10-01',
+        paymentMethod: PaymentMethod.CARD,
+      }),
+    ).toThrow(NotFoundException);
   });
 
   it('hides expenses from other users', () => {
     const expense = add();
 
-    expect(() => service.findOne('user-2', expense.id)).toThrow(NotFoundException);
+    expect(() => service.findOne('user-2', expense.id)).toThrow(
+      NotFoundException,
+    );
     expect(service.findAll('user-2', listQuery()).data).toEqual([]);
   });
 
@@ -97,7 +101,12 @@ describe('ExpensesService', () => {
     add({ title: 'Late', date: '2026-11-01' });
 
     expect(
-      titles({ from: '2026-10-01', to: '2026-10-31', sortBy: SortField.DATE, order: SortOrder.ASC }),
+      titles({
+        from: '2026-10-01',
+        to: '2026-10-31',
+        sortBy: SortField.DATE,
+        order: SortOrder.ASC,
+      }),
     ).toEqual(['Start', 'End']);
   });
 
@@ -106,8 +115,14 @@ describe('ExpensesService', () => {
     add({ title: 'Small', amount: 5 });
     add({ title: 'Big', amount: 50 });
 
-    expect(titles({ sortBy: SortField.AMOUNT, order: SortOrder.ASC })).toEqual(['Small', 'Mid', 'Big']);
-    expect(titles({ sortBy: SortField.AMOUNT, order: SortOrder.DESC })).toEqual(['Big', 'Mid', 'Small']);
+    expect(titles({ sortBy: SortField.AMOUNT, order: SortOrder.ASC })).toEqual([
+      'Small',
+      'Mid',
+      'Big',
+    ]);
+    expect(titles({ sortBy: SortField.AMOUNT, order: SortOrder.DESC })).toEqual(
+      ['Big', 'Mid', 'Small'],
+    );
   });
 
   it('sorts by date newest first by default', () => {
@@ -124,7 +139,12 @@ describe('ExpensesService', () => {
 
     const page2 = service.findAll(
       'user-1',
-      listQuery({ page: 2, limit: 2, sortBy: SortField.DATE, order: SortOrder.ASC }),
+      listQuery({
+        page: 2,
+        limit: 2,
+        sortBy: SortField.DATE,
+        order: SortOrder.ASC,
+      }),
     );
 
     expect(page2.total).toBe(3);

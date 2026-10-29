@@ -23,7 +23,8 @@ export class AuthService {
   async login(dto: LoginDto): Promise<{ accessToken: string }> {
     const user = this.usersService.findByEmail(dto.email.toLowerCase());
     const passwordMatches =
-      user !== undefined && (await bcrypt.compare(dto.password, user.passwordHash));
+      user !== undefined &&
+      (await bcrypt.compare(dto.password, user.passwordHash));
     if (!user || !passwordMatches) {
       throw new UnauthorizedException('Invalid email or password');
     }

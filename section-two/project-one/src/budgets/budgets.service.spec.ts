@@ -61,12 +61,16 @@ describe('BudgetsService', () => {
   });
 
   it('throws when no budget is set for the month', () => {
-    expect(() => budgets.status('user-1', '2026-10')).toThrow(NotFoundException);
+    expect(() => budgets.status('user-1', '2026-10')).toThrow(
+      NotFoundException,
+    );
   });
 
   it('keeps budgets private to each user', () => {
     budgets.set('user-1', '2026-10', 100);
 
-    expect(() => budgets.status('user-2', '2026-10')).toThrow(NotFoundException);
+    expect(() => budgets.status('user-2', '2026-10')).toThrow(
+      NotFoundException,
+    );
   });
 });

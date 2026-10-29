@@ -6,14 +6,18 @@ describe('CategoriesService', () => {
   let service: CategoriesService;
 
   beforeEach(() => {
-    const noExpenses = { countInCategory: () => 0 } as unknown as ExpensesService;
+    const noExpenses = {
+      countInCategory: () => 0,
+    } as unknown as ExpensesService;
     service = new CategoriesService(noExpenses);
   });
 
   it('rejects a duplicate name for the same user', () => {
     service.create('user-1', { name: 'Food' });
 
-    expect(() => service.create('user-1', { name: 'Food' })).toThrow(ConflictException);
+    expect(() => service.create('user-1', { name: 'Food' })).toThrow(
+      ConflictException,
+    );
   });
 
   it('allows the same name for a different user', () => {
@@ -25,7 +29,9 @@ describe('CategoriesService', () => {
   it('hides categories that belong to another user', () => {
     const category = service.create('user-1', { name: 'Food' });
 
-    expect(() => service.findOne('user-2', category.id)).toThrow(NotFoundException);
+    expect(() => service.findOne('user-2', category.id)).toThrow(
+      NotFoundException,
+    );
     expect(service.findAll('user-2')).toEqual([]);
   });
 
