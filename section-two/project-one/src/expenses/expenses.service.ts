@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
+import { analyzeSpending } from '../analysis/analyze-spending.js';
+import { SpendingRecord } from '../analysis/analysis.types.js';
+import { BudgetsService } from '../budgets/budgets.service.js';
 import { CategoriesService } from '../categories/categories.service.js';
+import { DateRange, monthRange, previousMonth, todayString } from '../common/dates.js';
 import { roundMoney } from '../common/money.js';
 import { PaginatedResult } from '../common/paginated-result.js';
 import { CreateExpenseDto } from './dto/create-expense.dto.js';
@@ -23,6 +27,7 @@ export class ExpensesService {
     @InjectRepository(Expense)
     private readonly expenses: Repository<Expense>,
     private readonly categoriesService: CategoriesService,
+    private readonly budgetsService: BudgetsService,
   ) {}
 
   async create(userId: string, dto: CreateExpenseDto): Promise<Expense> {
@@ -99,7 +104,34 @@ export class ExpensesService {
     return {
       total: roundMoney(byCategory.reduce((sum, row) => sum + row.total, 0)),
       byCategory,
+      analysis: await this.analyse(userId, query),
     };
+  }
+
+  // Analysis covers every expense in the period, ignoring category and payment filters,
+  // so budgets always compare against the full spending for that month.
+  private async analyse(userId: string, query: ExpenseQueryDto) {
+    const period = this.rangeOf(query);
+    const current = period ? await this.list(userId, rangeQuery(period)) : [];
+    const previous = query.month
+      ? await this.list(userId, rangeQuery(monthRange(previousMonth(query.month))))
+      : [];
+    const budgets = query.month ? await this.budgetsService.findForMonth(userId, query.month) : null;
+
+    return analyzeSpending({
+      current: current.map(toSpendingRecord),
+      previous: previous.map(toSpendingRecord),
+      period,
+      today: todayString(),
+      budgets,
+    });
+  }
+
+  private rangeOf(query: ExpenseQueryDto): DateRange | null {
+    if (query.month) {
+      return monthRange(query.month);
+    }
+    return query.from && query.to ? { from: query.from, to: query.to } : null;
   }
 
   private filtered(userId: string, query: ExpenseQueryDto): SelectQueryBuilder<Expense> {
@@ -115,11 +147,13 @@ export class ExpensesService {
         paymentMethod: query.paymentMethod,
       });
     }
-    if (query.from) {
-      qb.andWhere('expense.date >= :from', { from: query.from });
+
+    const { from, to } = query.month ? monthRange(query.month) : query;
+    if (from) {
+      qb.andWhere('expense.date >= :from', { from });
     }
-    if (query.to) {
-      qb.andWhere('expense.date <= :to', { to: query.to });
+    if (to) {
+      qb.andWhere('expense.date <= :to', { to });
     }
     return qb;
   }
@@ -129,4 +163,19 @@ export class ExpensesService {
     const direction = query.order === SortOrder.ASC ? 'ASC' : 'DESC';
     return qb.orderBy(SORT_COLUMNS[query.sortBy], direction).addOrderBy('expense.id', 'ASC');
   }
+}
+
+function rangeQuery(range: DateRange): ExpenseQueryDto {
+  return Object.assign(new ExpenseQueryDto(), range);
+}
+
+function toSpendingRecord(expense: Expense): SpendingRecord {
+  return {
+    id: expense.id,
+    title: expense.title,
+    amount: expense.amount,
+    date: expense.date,
+    categoryId: expense.categoryId,
+    categoryName: expense.category.name,
+  };
 }

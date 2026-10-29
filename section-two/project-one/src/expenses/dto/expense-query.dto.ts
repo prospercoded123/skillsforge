@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, IsUUID, Matches } from 'class-validator';
+import { MONTH_PATTERN } from '../../common/dates.js';
 import { PaymentMethod } from '../enums/payment-method.enum.js';
 import { SortField, SortOrder } from '../enums/sort.enum.js';
 
@@ -22,6 +23,13 @@ export class ExpenseQueryDto {
   @IsOptional()
   @IsDateString()
   to?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whole calendar month, e.g. 2026-10. Overrides from and to, and enables budget analysis.',
+  })
+  @IsOptional()
+  @Matches(MONTH_PATTERN, { message: 'month must be in YYYY-MM format' })
+  month?: string;
 
   @ApiPropertyOptional({ enum: SortField, default: SortField.DATE })
   @IsOptional()

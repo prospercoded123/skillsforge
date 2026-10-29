@@ -1,3 +1,5 @@
+import type { SpendingAnalysis } from '../analysis/analysis.types.js';
+
 export interface CategorySpending {
   categoryId: string;
   categoryName: string;
@@ -7,4 +9,5 @@ export interface CategorySpending {
 export interface ExpenseSummary {
   total: number;
   byCategory: CategorySpending[];
+  analysis: SpendingAnalysis;
 }
