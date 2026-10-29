@@ -7,6 +7,8 @@ import {
 import { randomUUID } from 'node:crypto';
 import { CategoriesService } from '../categories/categories.service.js';
 import { CreateExpenseDto } from './dto/create-expense.dto.js';
+import { PaginatedResult } from '../common/paginated-result.js';
+import { ExpenseListQueryDto } from './dto/expense-list-query.dto.js';
 import { ExpenseQueryDto } from './dto/expense-query.dto.js';
 import { UpdateExpenseDto } from './dto/update-expense.dto.js';
 import { Expense } from './entities/expense.entity.js';
@@ -40,9 +42,16 @@ export class ExpensesService {
     return expense;
   }
 
-  findAll(userId: string, query: ExpenseQueryDto): Expense[] {
+  findAll(userId: string, query: ExpenseListQueryDto): PaginatedResult<Expense> {
     const matching = this.ownedBy(userId).filter((e) => this.matches(e, query));
-    return this.sort(matching, query.sortBy, query.order);
+    const sorted = this.sort(matching, query.sortBy, query.order);
+    const start = (query.page - 1) * query.limit;
+    return {
+      data: sorted.slice(start, start + query.limit),
+      total: sorted.length,
+      page: query.page,
+      limit: query.limit,
+    };
   }
 
   findOne(userId: string, id: string): Expense {

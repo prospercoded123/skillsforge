@@ -15,6 +15,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { AuthUser } from '../auth/auth-user.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { CreateExpenseDto } from './dto/create-expense.dto.js';
+import { ExpenseListQueryDto } from './dto/expense-list-query.dto.js';
 import { ExpenseQueryDto } from './dto/expense-query.dto.js';
 import { UpdateExpenseDto } from './dto/update-expense.dto.js';
 import { ExpensesService } from './expenses.service.js';
@@ -31,7 +32,7 @@ export class ExpensesController {
   }
 
   @Get()
-  findAll(@CurrentUser() user: AuthUser, @Query() query: ExpenseQueryDto) {
+  findAll(@CurrentUser() user: AuthUser, @Query() query: ExpenseListQueryDto) {
     return this.expensesService.findAll(user.id, query);
   }
 
