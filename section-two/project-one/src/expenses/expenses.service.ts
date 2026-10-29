@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { CategoriesService } from '../categories/categories.service.js';
 import { CreateExpenseDto } from './dto/create-expense.dto.js';
 import { PaginatedResult } from '../common/paginated-result.js';
+import { roundMoney } from '../common/money.js';
 import { ExpenseListQueryDto } from './dto/expense-list-query.dto.js';
 import { ExpenseQueryDto } from './dto/expense-query.dto.js';
 import { UpdateExpenseDto } from './dto/update-expense.dto.js';
@@ -123,8 +124,4 @@ export class ExpensesService {
       return diff * direction;
     });
   }
-}
-
-function roundMoney(amount: number): number {
-  return Math.round(amount * 100) / 100;
 }
