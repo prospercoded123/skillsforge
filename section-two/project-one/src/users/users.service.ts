@@ -1,39 +1,28 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { hasPostgresCode, UNIQUE_VIOLATION } from '../common/database/postgres-errors.js';
 import { User } from './entities/user.entity.js';
 
 @Injectable()
 export class UsersService {
-  private readonly users = new Map<string, User>();
+  constructor(
+    @InjectRepository(User)
+    private readonly users: Repository<User>,
+  ) {}
 
-  create(email: string, passwordHash: string): User {
-    if (this.findByEmail(email)) {
-      throw new ConflictException('Email is already registered');
+  async create(email: string, passwordHash: string): Promise<User> {
+    try {
+      return await this.users.save(this.users.create({ email, passwordHash }));
+    } catch (error) {
+      if (hasPostgresCode(error, UNIQUE_VIOLATION)) {
+        throw new ConflictException('Email is already registered');
+      }
+      throw error;
     }
-
-    const user: User = {
-      id: randomUUID(),
-      email,
-      passwordHash,
-      createdAt: new Date(),
-    };
-    this.users.set(user.id, user);
-    return user;
   }
 
-  findByEmail(email: string): User | undefined {
-    return [...this.users.values()].find((user) => user.email === email);
-  }
-
-  findById(id: string): User {
-    const user = this.users.get(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
+  findByEmail(email: string): Promise<User | null> {
+    return this.users.findOneBy({ email });
   }
 }
