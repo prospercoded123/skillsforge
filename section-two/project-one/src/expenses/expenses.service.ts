@@ -7,8 +7,10 @@ import {
 import { randomUUID } from 'node:crypto';
 import { CategoriesService } from '../categories/categories.service.js';
 import { CreateExpenseDto } from './dto/create-expense.dto.js';
+import { ExpenseQueryDto } from './dto/expense-query.dto.js';
 import { UpdateExpenseDto } from './dto/update-expense.dto.js';
 import { Expense } from './entities/expense.entity.js';
+import { SortField, SortOrder } from './enums/sort.enum.js';
 
 @Injectable()
 export class ExpensesService {
@@ -37,8 +39,9 @@ export class ExpensesService {
     return expense;
   }
 
-  findAll(userId: string): Expense[] {
-    return [...this.expenses.values()].filter((e) => e.userId === userId);
+  findAll(userId: string, query: ExpenseQueryDto): Expense[] {
+    const matching = this.ownedBy(userId).filter((e) => this.matches(e, query));
+    return this.sort(matching, query.sortBy, query.order);
   }
 
   findOne(userId: string, id: string): Expense {
@@ -63,11 +66,34 @@ export class ExpensesService {
   }
 
   countInCategory(userId: string, categoryId: string): number {
-    return this.findAll(userId).filter((e) => e.categoryId === categoryId).length;
+    return this.ownedBy(userId).filter((e) => e.categoryId === categoryId).length;
   }
 
   remove(userId: string, id: string): void {
     this.findOne(userId, id);
     this.expenses.delete(id);
+  }
+
+  private ownedBy(userId: string): Expense[] {
+    return [...this.expenses.values()].filter((e) => e.userId === userId);
+  }
+
+  private matches(expense: Expense, query: ExpenseQueryDto): boolean {
+    if (query.categoryId && expense.categoryId !== query.categoryId) return false;
+    if (query.paymentMethod && expense.paymentMethod !== query.paymentMethod) return false;
+    if (query.from && expense.date < new Date(query.from)) return false;
+    if (query.to && expense.date > new Date(query.to)) return false;
+    return true;
+  }
+
+  private sort(expenses: Expense[], sortBy: SortField, order: SortOrder): Expense[] {
+    const direction = order === SortOrder.ASC ? 1 : -1;
+    return [...expenses].sort((a, b) => {
+      const diff =
+        sortBy === SortField.AMOUNT
+          ? a.amount - b.amount
+          : a.date.getTime() - b.date.getTime();
+      return diff * direction;
+    });
   }
 }
