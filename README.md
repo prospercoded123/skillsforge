@@ -1,6 +1,5 @@
 # SkillsForge Backend Assignment
 
-Submission for the SkillsForge backend internship. The brief is in `DocInstruction.pdf`.
 
 ## Where things are
 

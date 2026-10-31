@@ -12,7 +12,9 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { AuthUser } from '../auth/auth-user.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
+import { ApiDoc } from '../common/api-doc.js';
 import { BudgetsService } from './budgets.service.js';
+import { budgetsDocs } from './budgets.docs.js';
 import { SetBudgetDto } from './dto/set-budget.dto.js';
 import { ParseMonthPipe } from './pipes/parse-month.pipe.js';
 
@@ -23,6 +25,7 @@ export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
 
   @Get(':month')
+  @ApiDoc(budgetsDocs.findForMonth)
   findForMonth(
     @CurrentUser() user: AuthUser,
     @Param('month', ParseMonthPipe) month: string,
@@ -31,6 +34,7 @@ export class BudgetsController {
   }
 
   @Put(':month')
+  @ApiDoc(budgetsDocs.setOverall)
   setOverall(
     @CurrentUser() user: AuthUser,
     @Param('month', ParseMonthPipe) month: string,
@@ -41,6 +45,7 @@ export class BudgetsController {
 
   @Delete(':month')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiDoc(budgetsDocs.removeOverall)
   removeOverall(
     @CurrentUser() user: AuthUser,
     @Param('month', ParseMonthPipe) month: string,
@@ -49,6 +54,7 @@ export class BudgetsController {
   }
 
   @Put(':month/categories/:categoryId')
+  @ApiDoc(budgetsDocs.setForCategory)
   setForCategory(
     @CurrentUser() user: AuthUser,
     @Param('month', ParseMonthPipe) month: string,
@@ -65,6 +71,7 @@ export class BudgetsController {
 
   @Delete(':month/categories/:categoryId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiDoc(budgetsDocs.removeForCategory)
   removeForCategory(
     @CurrentUser() user: AuthUser,
     @Param('month', ParseMonthPipe) month: string,

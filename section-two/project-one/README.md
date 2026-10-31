@@ -16,6 +16,19 @@ npm run start:dev
 
 Migrations in `drizzle/` are applied automatically at startup.
 
+### Run with Docker
+
+No Node.js or local Postgres needed. One command starts Postgres 17 and the API, with the API connected to the database:
+
+```bash
+docker compose up -d --build
+```
+
+- API and Swagger UI: http://localhost:3000/api
+- Postgres is also exposed on `localhost:5432`.
+- `JWT_ACCESS_SECRET` is read from your shell or `.env` and falls back to a development value. Set your own for anything beyond local use.
+- Stop with `docker compose down`. Add `-v` to also delete the database volume.
+
 ## Structure
 
 Each feature folder contains a controller (HTTP routes), a service (rules and queries), and `dto/` (validated input).
@@ -34,20 +47,3 @@ Each feature folder contains a controller (HTTP routes), a service (rules and qu
 | `src/database/` | Drizzle connection, startup migrations, schema |
 | `src/common/` | Dates, money, pagination types, Postgres error codes |
 | `drizzle/` | Generated SQL migrations |
-
-Start reading at `src/database/schema.ts`, then `src/expenses/expenses.service.ts`, then `src/analysis/analyze-spending.ts`.
-
-## Behaviour
-
-- **Requests.** Every route except `/auth/*` needs `Authorization: Bearer <accessToken>`. Every query filters by the logged-in user, so another user's record returns `404`.
-- **Auth.** Access tokens expire after 15 minutes. Refresh tokens are random, stored as hashes, and rotate on each use. Reusing a refresh token revokes all of that user's sessions.
-- **Categories.** Names are unique per user. A category that still has expenses cannot be deleted (`409`).
-- **Expense filters.** `categoryId`, `paymentMethod`, `from` and `to` (inclusive dates), and `month` (`YYYY-MM`, which overrides `from` and `to`). Sorting by `date` or `amount`. Lists are paginated with `page` and `limit`.
-- **Analysis.** `GET /expenses/summary?month=YYYY-MM` adds budget flags (`exceeded`, `projected_to_exceed`, `near_limit`, `on_track`), the largest expenses behind each flag, and the change from the previous month. A `from`/`to` range adds category trends and suggestions. Analysis always uses every expense in the period, ignoring category and payment filters. Thresholds are in `src/analysis/analysis.constants.ts`.
-- **Reports.** `GET /reports/expenses?format=json|csv|pdf`.
-
-## Changing the schema
-
-1. Edit `src/database/schema.ts`.
-2. Run `npm run db:generate`.
-3. Commit the schema change and the new files in `drizzle/` together.

@@ -1,6 +1,8 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { ApiDoc } from '../common/api-doc.js';
 import { AuthService } from './auth.service.js';
+import { authDocs } from './auth.docs.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
@@ -13,6 +15,7 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @ApiDoc(authDocs.register)
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
@@ -20,6 +23,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @ApiDoc(authDocs.login)
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
@@ -27,6 +31,7 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @ApiDoc(authDocs.refresh)
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto.refreshToken);
   }
@@ -34,6 +39,7 @@ export class AuthController {
   @Public()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiDoc(authDocs.logout)
   logout(@Body() dto: RefreshTokenDto) {
     return this.authService.logout(dto.refreshToken);
   }

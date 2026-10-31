@@ -13,7 +13,9 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { AuthUser } from '../auth/auth-user.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
+import { ApiDoc } from '../common/api-doc.js';
 import { CategoriesService } from './categories.service.js';
+import { categoriesDocs } from './categories.docs.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 
@@ -24,16 +26,19 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
+  @ApiDoc(categoriesDocs.create)
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(user.id, dto);
   }
 
   @Get()
+  @ApiDoc(categoriesDocs.findAll)
   findAll(@CurrentUser() user: AuthUser) {
     return this.categoriesService.findAll(user.id);
   }
 
   @Get(':id')
+  @ApiDoc(categoriesDocs.findOne)
   findOne(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -42,6 +47,7 @@ export class CategoriesController {
   }
 
   @Patch(':id')
+  @ApiDoc(categoriesDocs.update)
   update(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -52,6 +58,7 @@ export class CategoriesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiDoc(categoriesDocs.remove)
   remove(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,

@@ -3,9 +3,11 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { AuthUser } from '../auth/auth-user.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
+import { ApiDoc } from '../common/api-doc.js';
 import { ExportExpensesQueryDto } from './dto/export-expenses-query.dto.js';
 import { ExportFormat } from './enums/export-format.enum.js';
 import { ReportsService } from './reports.service.js';
+import { reportsDocs } from './reports.docs.js';
 
 @ApiTags('reports')
 @ApiBearerAuth()
@@ -14,6 +16,7 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('expenses')
+  @ApiDoc(reportsDocs.exportExpenses)
   async exportExpenses(
     @CurrentUser() user: AuthUser,
     @Query() query: ExportExpensesQueryDto,
